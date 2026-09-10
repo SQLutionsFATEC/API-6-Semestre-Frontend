@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 
-import SearchBar from "./components/SearchBar";
+import SearchBar from "./components/SearchBar/SearchBar";
 import DocumentList from "./components/Document/DocumentList";
-import Pagination from "./components/Pagination";
+import Pagination from "./components/Pagination/Pagination";
 
 import documents from "./data/documents";
 
