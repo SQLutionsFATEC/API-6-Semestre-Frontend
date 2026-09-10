@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
 import SearchBar from "./components/SearchBar";
-import DocumentList from "./components/DocumentList";
+import DocumentList from "./components/Document/DocumentList";
 import Pagination from "./components/Pagination";
 
 import documents from "./data/documents";
