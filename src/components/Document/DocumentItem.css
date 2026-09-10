@@ -1,0 +1,80 @@
+.document-item {
+  display: grid;
+  grid-template-columns: 55px minmax(220px, 1fr) 100px 100px 100px 95px;
+  align-items: center;
+  min-height: 70px;
+  margin-bottom: 7px;
+  padding: 0 10px;
+  border: 1px solid #efcbd7;
+  border-radius: 7px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(80, 30, 50, 0.08);
+}
+
+.document-file span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 27px;
+  border: 2px solid #ff001e;
+  border-radius: 7px;
+  color: #ff001e;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.document-name {
+  padding-right: 19px;
+  font-size: 14px;
+  line-height: 14px;
+  color: #000000;
+}
+
+.document-type span,
+.document-access span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 65px;
+  height: 27px;
+  padding: 0 7px;
+  border: 2px solid #004196;
+  border-radius: 7px;
+  color: #004196;
+  font-size: 12px;
+  background-color: #f8fbff;
+}
+
+.document-date {
+  font-size: 13px;
+  color: #000000;
+}
+
+.document-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.document-action button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+
+  height: 27px;
+  padding: 0 8px;
+
+  border: 2px solid #00867b;
+  border-radius: 7px;
+
+  background-color: #ffffff;
+  color: #00867b;
+
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.document-action button:hover {
+  background-color: #f3f8ff;
+}
