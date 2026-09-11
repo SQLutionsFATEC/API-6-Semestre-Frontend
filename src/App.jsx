@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import SearchBar from "./components/SearchBar/SearchBar";
 import DocumentList from "./components/Document/DocumentList";
 import Pagination from "./components/Pagination/Pagination";
+import DocumentModal from "./components/Document/DocumentModal";
 
 import documents from "./data/documents";
 
@@ -43,19 +44,31 @@ function App() {
   );
 
   function handleSearch(value) {
-    setSearch(value);
-    setCurrentPage(1);
+  setSearch(value);
+  setCurrentPage(1);
+}
+
+function handlePageChange(page) {
+  if (page < 1 || page > totalPages) {
+    return;
   }
 
-  function handlePageChange(page) {
-    if (page < 1 || page > totalPages) {
-      return;
-    }
+  setCurrentPage(page);
+}
 
-    setCurrentPage(page);
+function handleViewPdf(document) {
+  if (document.pdfUrl) {
+    window.open(document.pdfUrl, "_blank");
+    return;
   }
 
-  return (
+  console.log(
+    "PDF ainda não disponível para o documento:",
+    document.name
+  );
+}
+
+return (
     <div className="app">
       <aside className="sidebar">
         <div className="logo">
@@ -194,55 +207,11 @@ function App() {
         </section>
       </main>
 
-      {selectedDocument && (
-        <div
-          className="modal-overlay"
-          onClick={() => setSelectedDocument(null)}
-        >
-          <div
-            className="document-modal"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="modal-header">
-              <h2>{selectedDocument.name}</h2>
-
-              <button
-                className="modal-close"
-                onClick={() => setSelectedDocument(null)}
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="pdf-preview">
-              <div className="pdf-icon">
-                PDF
-              </div>
-
-              <h3>Visualização do documento</h3>
-
-              <p>
-                Esta é uma visualização mockada do documento
-                selecionado.
-              </p>
-            </div>
-
-            <div className="modal-footer">
-              <span>
-                Tipo: {selectedDocument.type}
-              </span>
-
-              <span>
-                Atualizado: {selectedDocument.updatedAt}
-              </span>
-
-              <span>
-                Acesso: {selectedDocument.accessLevel}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+    <DocumentModal
+        document={selectedDocument}
+        onClose={() => setSelectedDocument(null)}
+        onViewPdf={handleViewPdf}
+      />
     </div>
   );
 }

@@ -13,7 +13,7 @@ function DocumentList({ documents, onView }) {
         <div></div>
       </div>
 
-      {documents.length > 2 ? (
+      {documents.length > 0 ? (
         documents.map((document) => (
           <DocumentItem
             key={document.id}
