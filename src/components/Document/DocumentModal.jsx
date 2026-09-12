@@ -14,12 +14,15 @@ function DocumentModal({ document, onClose, onViewPdf }) {
   ];
 
   return (
-    <div className="document-modal-overlay" onClick={onClose}>
+    <div
+      className="document-modal-overlay"
+      onClick={onClose}
+    >
       <div
         className="document-modal"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="modal-top">
+        <header className="modal-top">
           <div className="modal-code-section">
             <span className="modal-label">
               Código da norma
@@ -27,7 +30,7 @@ function DocumentModal({ document, onClose, onViewPdf }) {
 
             <div className="modal-code">
               {document.code || document.name}
-              
+
               <span className="modal-pdf-badge">
                 PDF
               </span>
@@ -41,10 +44,9 @@ function DocumentModal({ document, onClose, onViewPdf }) {
           >
             ×
           </button>
-        </div>
+        </header>
 
-        {/* TÍTULO */}
-        <div className="modal-title-section">
+        <section className="modal-title-section">
           <span className="modal-label">
             Título do arquivo
           </span>
@@ -52,15 +54,25 @@ function DocumentModal({ document, onClose, onViewPdf }) {
           <p className="modal-document-title">
             {document.name}
           </p>
-        </div>
+        </section>
 
-        <div className="modal-main-info">
+        <section className="modal-main-info">
           <div className="modal-info-group">
             <span className="modal-label">
               Setor/Tipo
             </span>
 
-            <span className="modal-info-badge">
+            <span
+              className={`modal-info-badge ${
+                document.type === "Técnico"
+                  ? "type-técnico"
+                  : document.type === "Normativo"
+                  ? "type-normativo"
+                  : document.type === "Administrativo"
+                  ? "type-administrativo"
+                  : ""
+              }`}
+            >
               {document.type}
             </span>
           </div>
@@ -70,7 +82,17 @@ function DocumentModal({ document, onClose, onViewPdf }) {
               Nível de Acesso
             </span>
 
-            <span className="modal-info-badge">
+            <span
+              className={`modal-info-badge ${
+                document.accessLevel === "Gestor"
+                  ? "access-gestor"
+                  : document.accessLevel === "Usuário"
+                  ? "access-usuário"
+                  : document.accessLevel === "Público"
+                  ? "access-público"
+                  : ""
+              }`}
+            >
               {document.accessLevel}
             </span>
           </div>
@@ -80,13 +102,13 @@ function DocumentModal({ document, onClose, onViewPdf }) {
               Categoria
             </span>
 
-            <span className="modal-info-badge">
+            <span className="modal-info-badge modal-category-badge">
               {document.category || document.type}
             </span>
           </div>
-        </div>
+        </section>
 
-        <div className="modal-details">
+        <section className="modal-details">
           <div className="file-data-section">
             <span className="section-title">
               Dados do arquivo
@@ -95,6 +117,7 @@ function DocumentModal({ document, onClose, onViewPdf }) {
             <div className="file-data-box">
               <div className="file-data-row">
                 <span>↻ Revisão:</span>
+
                 <strong>
                   {document.revision || "5J"}
                 </strong>
@@ -102,6 +125,7 @@ function DocumentModal({ document, onClose, onViewPdf }) {
 
               <div className="file-data-row">
                 <span>◷ Data de Atualização:</span>
+
                 <strong>
                   {document.updatedAt}
                 </strong>
@@ -109,6 +133,7 @@ function DocumentModal({ document, onClose, onViewPdf }) {
 
               <div className="file-data-row">
                 <span>▤ Tamanho do arquivo:</span>
+
                 <strong>
                   {document.fileSize || "66.8 MB"}
                 </strong>
@@ -116,7 +141,6 @@ function DocumentModal({ document, onClose, onViewPdf }) {
             </div>
           </div>
 
-          {/* TAGS */}
           <div className="tags-section">
             <span className="section-title">
               🏷 Tags
@@ -124,15 +148,18 @@ function DocumentModal({ document, onClose, onViewPdf }) {
 
             <div className="tags-box">
               {tags.map((tag) => (
-                <span className="document-tag" key={tag}>
+                <span
+                  className="document-tag"
+                  key={tag}
+                >
                   {tag}
                 </span>
               ))}
             </div>
           </div>
-        </div>
+        </section>
 
-        <div className="modal-actions">
+        <footer className="modal-actions">
           <button
             className="modal-view-button"
             onClick={() => onViewPdf(document)}
@@ -160,7 +187,7 @@ function DocumentModal({ document, onClose, onViewPdf }) {
 
             Visualizar
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );
