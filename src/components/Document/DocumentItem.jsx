@@ -1,18 +1,31 @@
 import "./DocumentItem.css";
 
 function DocumentItem({ document, onView }) {
+  const typeClass = document.type
+    ?.toLowerCase()
+    .replace(/\s+/g, "-");
+
+  const accessClass = document.accessLevel
+    ?.toLowerCase()
+    .replace(/\s+/g, "-");
+
   return (
     <div className="document-item">
       <div className="document-file">
         <span>{document.fileType}</span>
       </div>
 
-      <div className="document-name" title={document.name}>
+      <div
+        className="document-name"
+        title={document.name}
+      >
         {document.name}
       </div>
 
       <div className="document-type">
-        <span>{document.type}</span>
+        <span className={`type-badge type-${typeClass}`}>
+          {document.type}
+        </span>
       </div>
 
       <div className="document-date">
@@ -20,7 +33,11 @@ function DocumentItem({ document, onView }) {
       </div>
 
       <div className="document-access">
-        <span>{document.accessLevel}</span>
+        <span
+          className={`access-badge access-${accessClass}`}
+        >
+          {document.accessLevel}
+        </span>
       </div>
 
       <div className="document-action">
