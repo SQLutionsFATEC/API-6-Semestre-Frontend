@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Relatórios gerados pelos testes
+coverage/
+
+# PyCharm / JetBrains
+.idea/
