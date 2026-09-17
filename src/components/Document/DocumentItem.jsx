@@ -4,7 +4,7 @@ function formatarData(dataISO) {
   if (!dataISO) return "-";
 
   const data = new Date(dataISO);
-  if (isNaN(data.getTime())) return dataISO;
+  if (Number.isNaN(data.getTime())) return dataISO;
 
   return data.toLocaleDateString("pt-BR", {
     day: "2-digit",
