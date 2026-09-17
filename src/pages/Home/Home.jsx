@@ -1,4 +1,4 @@
-import { FiFileText, FiFilter } from "react-icons/fi";
+import { FiFileText, FiFilter, FiAlertCircle } from "react-icons/fi";
 import { useEffect, useState } from "react";
 
 import SearchBar from "../../components/SearchBar/SearchBar";
@@ -82,8 +82,19 @@ function Home() {
       </header>
 
       <section className="documents-section">
-        {loading && <p>Carregando documentos...</p>}
-        {error && <p style={{ color: "red" }}>{error}</p>}
+        {loading && (
+          <p className="loading-message">Carregando documentos...</p>
+        )}
+
+        {error && (
+          <div className="error-message">
+            <FiAlertCircle size={22} />
+            <div className="error-text">
+              <span className="error-title">Erro ao carregar</span>
+              <span className="error-description">{error}</span>
+            </div>
+          </div>
+        )}
 
         {!loading && !error && (
           <>
