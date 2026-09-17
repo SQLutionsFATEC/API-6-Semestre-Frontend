@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 
-import SearchBar from "../components/SearchBar/SearchBar";
+import SearchBar from "../../components/SearchBar/SearchBar";
 import DocumentList from "../components/Document/DocumentList";
-import Pagination from "../components/Pagination/Pagination";
+import Pagination from "../../components/Pagination/Pagination";
 import DocumentModal from "../components/Document/DocumentModal";
 
-import { fetchDocuments } from "../services/documentService";
+import { fetchDocuments } from "../../services/documentService";
 
 import "./Home.css";
 
