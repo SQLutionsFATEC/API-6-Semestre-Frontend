@@ -1,5 +1,5 @@
 import Layout from "./components/Layout/Layout";
-import Home from "./pages/Home";
+import Home from "./pages/Home/Home";
 
 import "./App.css";
 

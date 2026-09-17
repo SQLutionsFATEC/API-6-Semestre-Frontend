@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
 import SearchBar from "../../components/SearchBar/SearchBar";
-import DocumentList from "../components/Document/DocumentList";
+import DocumentList from "../../components/Document/DocumentList/DocumentList";
 import Pagination from "../../components/Pagination/Pagination";
-import DocumentModal from "../components/Document/DocumentModal";
+import DocumentModal from "../../components/Document/DocumentModal/DocumentModal";
 
 import { fetchDocuments } from "../../services/documentService";
 
