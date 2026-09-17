@@ -1,3 +1,4 @@
+import { FiSearch } from "react-icons/fi";
 import "./SearchBar.css";
 
 function SearchBar({ value, onChange }) {
@@ -11,27 +12,7 @@ function SearchBar({ value, onChange }) {
       />
 
       <button type="button" className="search-button" aria-label="Pesquisar">
-        <svg
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle
-            cx="11"
-            cy="11"
-            r="7"
-            stroke="currentColor"
-            strokeWidth="2"
-          />
-          <path
-            d="M20 20L16.5 16.5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-        </svg>
+        <FiSearch size={18} />
       </button>
     </div>
   );

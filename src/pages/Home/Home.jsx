@@ -1,3 +1,4 @@
+import { FiFileText, FiFilter } from "react-icons/fi";
 import { useEffect, useState } from "react";
 
 import SearchBar from "../../components/SearchBar/SearchBar";
@@ -67,20 +68,14 @@ function Home() {
     <div className="home">
       <header className="page-header">
         <div className="page-title">
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-            <path d="M7 3H15L19 7V21H7V3Z" stroke="currentColor" strokeWidth="1.7" />
-            <path d="M15 3V7H19" stroke="currentColor" strokeWidth="1.7" />
-            <path d="M4 7V19C4 20.1 4.9 21 6 21" stroke="currentColor" strokeWidth="1.7" />
-          </svg>
+          <FiFileText size={30} />
           <h1>Documentos</h1>
         </div>
 
         <div className="header-actions">
           <SearchBar value={search} onChange={handleSearch} />
           <button className="filter-button">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-              <path d="M4 6H20L14 13V19L10 21V13L4 6Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
-            </svg>
+            <FiFilter size={15} />
             Filtros
           </button>
         </div>
