@@ -1,5 +1,18 @@
 import "./DocumentItem.css";
 
+function formatarData(dataISO) {
+  if (!dataISO) return "-";
+
+  const data = new Date(dataISO);
+  if (isNaN(data.getTime())) return dataISO;
+
+  return data.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 function DocumentItem({ document, onView }) {
   const typeClass = document.type
     ?.toLowerCase()
@@ -12,31 +25,26 @@ function DocumentItem({ document, onView }) {
   return (
     <div className="document-item">
       <div className="document-file">
-        <span>{document.fileType}</span>
+        <span>{document.tipo_arquivo}</span>
       </div>
 
-      <div
-        className="document-name"
-        title={document.name}
-      >
-        {document.name}
+      <div className="document-name" title={document.nome}>
+        {document.nome}
       </div>
 
       <div className="document-type">
         <span className={`type-badge type-${typeClass}`}>
-          {document.type}
+          {document.setor}
         </span>
       </div>
 
       <div className="document-date">
-        {document.updatedAt}
+        {formatarData(document.data_atualizacao)}
       </div>
 
       <div className="document-access">
-        <span
-          className={`access-badge access-${accessClass}`}
-        >
-          {document.accessLevel}
+        <span className={`access-badge access-${accessClass}`}>
+          {document.nivel}
         </span>
       </div>
 
@@ -54,7 +62,6 @@ function DocumentItem({ document, onView }) {
               stroke="currentColor"
               strokeWidth="1.8"
             />
-
             <circle
               cx="12"
               cy="12"
@@ -63,7 +70,6 @@ function DocumentItem({ document, onView }) {
               strokeWidth="1.8"
             />
           </svg>
-
           Visualizar
         </button>
       </div>

@@ -1,56 +1,57 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import SearchBar from "../components/SearchBar/SearchBar";
 import DocumentList from "../components/Document/DocumentList";
 import Pagination from "../components/Pagination/Pagination";
 import DocumentModal from "../components/Document/DocumentModal";
 
-import documents from "../data/documents";
+import { fetchDocuments } from "../services/documentService";
 
 import "./Home.css";
 
-const DOCUMENTS_PER_PAGE = 10;
-
 function Home() {
   const [search, setSearch] = useState("");
+  const [documents, setDocuments] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
 
-  const filteredDocuments = useMemo(() => {
-    return documents.filter((document) =>
-      document.name
-        .toLowerCase()
-        .includes(search.toLowerCase())
-    );
-  }, [search]);
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      setError(null);
 
-  const totalPages = Math.ceil(
-    filteredDocuments.length / DOCUMENTS_PER_PAGE
-  );
+      try {
+        const data = await fetchDocuments({
+          nome: search,
+          page: currentPage,
+        });
+        console.log(data);
 
-  const validPage =
-    totalPages === 0
-      ? 1
-      : Math.min(currentPage, totalPages);
+        setDocuments(data.results || []);
+        setTotalPages(data.pages || 1);
+      } catch (err) {
+        console.error("Erro ao buscar documentos:", err);
+        setError("Não foi possível carregar os documentos.");
+        setDocuments([]);
+        setTotalPages(1);
+      } finally {
+        setLoading(false);
+      }
+    }, 400); 
 
-  const firstDocumentIndex =
-    (validPage - 1) * DOCUMENTS_PER_PAGE;
-
-  const currentDocuments = filteredDocuments.slice(
-    firstDocumentIndex,
-    firstDocumentIndex + DOCUMENTS_PER_PAGE
-  );
+    return () => clearTimeout(timer);
+  }, [search, currentPage]);
 
   function handleSearch(value) {
     setSearch(value);
-    setCurrentPage(1);
+    setCurrentPage(1); 
   }
 
   function handlePageChange(page) {
-    if (page < 1 || page > totalPages) {
-      return;
-    }
-
+    if (page < 1 || page > totalPages) return;
     setCurrentPage(page);
   }
 
@@ -59,82 +60,49 @@ function Home() {
       window.open(document.pdfUrl, "_blank");
       return;
     }
-
-    console.log(
-      "PDF ainda não disponível para o documento:",
-      document.name
-    );
+    console.log("PDF ainda não disponível:", document.nome);
   }
 
   return (
     <div className="home">
       <header className="page-header">
         <div className="page-title">
-          <svg
-            width="30"
-            height="30"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <path
-              d="M7 3H15L19 7V21H7V3Z"
-              stroke="currentColor"
-              strokeWidth="1.7"
-            />
-
-            <path
-              d="M15 3V7H19"
-              stroke="currentColor"
-              strokeWidth="1.7"
-            />
-
-            <path
-              d="M4 7V19C4 20.1 4.9 21 6 21"
-              stroke="currentColor"
-              strokeWidth="1.7"
-            />
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+            <path d="M7 3H15L19 7V21H7V3Z" stroke="currentColor" strokeWidth="1.7" />
+            <path d="M15 3V7H19" stroke="currentColor" strokeWidth="1.7" />
+            <path d="M4 7V19C4 20.1 4.9 21 6 21" stroke="currentColor" strokeWidth="1.7" />
           </svg>
-
           <h1>Documentos</h1>
         </div>
 
         <div className="header-actions">
-          <SearchBar
-            value={search}
-            onChange={handleSearch}
-          />
-
+          <SearchBar value={search} onChange={handleSearch} />
           <button className="filter-button">
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M4 6H20L14 13V19L10 21V13L4 6Z"
-                stroke="currentColor"
-                strokeWidth="1.7"
-                strokeLinejoin="round"
-              />
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+              <path d="M4 6H20L14 13V19L10 21V13L4 6Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
             </svg>
-
             Filtros
           </button>
         </div>
       </header>
 
       <section className="documents-section">
-        <DocumentList
-          documents={currentDocuments}
-          onView={setSelectedDocument}
-        />
+        {loading && <p>Carregando documentos...</p>}
+        {error && <p style={{ color: "red" }}>{error}</p>}
 
-        <Pagination
-          currentPage={validPage}
-          totalPages={totalPages}
-          onPageChange={handlePageChange}
-        />
+        {!loading && !error && (
+          <>
+            <DocumentList
+              documents={documents}
+              onView={setSelectedDocument}
+            />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </>
+        )}
       </section>
 
       <DocumentModal
