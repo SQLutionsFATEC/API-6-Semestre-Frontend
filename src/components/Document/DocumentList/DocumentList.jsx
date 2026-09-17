@@ -1,4 +1,4 @@
-import DocumentItem from "./DocumentItem";
+import DocumentItem from "../DocumentItem/DocumentItem";
 
 import "./DocumentList.css";
 

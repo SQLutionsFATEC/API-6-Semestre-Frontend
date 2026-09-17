@@ -1,3 +1,4 @@
+import { FiEye } from "react-icons/fi";
 import "./DocumentModal.css";
 
 function DocumentModal({ document, onClose, onViewPdf }) {
@@ -164,27 +165,7 @@ function DocumentModal({ document, onClose, onViewPdf }) {
             className="modal-view-button"
             onClick={() => onViewPdf(document)}
           >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-            >
-              <path
-                d="M2 12C2 12 5.5 5 12 5C18.5 5 22 12 22 12C22 12 18.5 19 12 19C5.5 19 2 12 2 12Z"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              />
-
-              <circle
-                cx="12"
-                cy="12"
-                r="3"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              />
-            </svg>
-
+            <FiEye size={18} />
             Visualizar
           </button>
         </footer>
