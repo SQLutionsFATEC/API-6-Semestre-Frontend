@@ -60,8 +60,8 @@ function Home() {
   }
 
   function handleViewPdf(document) {
-    if (document.pdfUrl) {
-      window.open(document.pdfUrl, "_blank");
+    if (document.data) {
+      window.open(document.data, "_blank");
       return;
     }
     console.log("PDF ainda não disponível:", document.nome);

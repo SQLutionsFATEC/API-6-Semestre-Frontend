@@ -1,16 +1,26 @@
 import { FiEye } from "react-icons/fi";
 import "./DocumentModal.css";
 
+function formatDate(value) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }) {
   if (loading || error) {
     return (
       <div className="document-modal-overlay" onClick={onClose}>
-        <div
-          className="document-modal"
-          onClick={(event) => event.stopPropagation()}
-        >
+        <div className="document-modal" onClick={(event) => event.stopPropagation()}>
           <button className="modal-close" onClick={onClose} aria-label="Fechar">
-            Ã—
+            X
           </button>
 
           {loading ? (
@@ -28,160 +38,72 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
     );
   }
 
-  if (!document) {
-    return null;
-  }
+  if (!document) return null;
 
-  const tags = [
-    "Materiais metálicos",
-    "Manutenção",
-    "MIL-HDBK",
-    "Engenharia",
-    "Handbook",
-  ];
+  const tags = document.etiquetas || [];
 
   return (
-    <div
-      className="document-modal-overlay"
-      onClick={onClose}
-    >
-      <div
-        className="document-modal"
-        onClick={(event) => event.stopPropagation()}
-      >
+    <div className="document-modal-overlay" onClick={onClose}>
+      <div className="document-modal" onClick={(event) => event.stopPropagation()}>
         <header className="modal-top">
           <div className="modal-code-section">
-            <span className="modal-label">
-              Código da norma
-            </span>
+            <span className="modal-label">Arquivo</span>
 
             <div className="modal-code">
-              {document.code || document.name}
-
+              {document.nome}
               <span className="modal-pdf-badge">
-                PDF
+                {document.tipo_arquivo?.toUpperCase() || "ARQUIVO"}
               </span>
             </div>
           </div>
 
-          <button
-            className="modal-close"
-            onClick={onClose}
-            aria-label="Fechar"
-          >
-            ×
+          <button className="modal-close" onClick={onClose} aria-label="Fechar">
+            X
           </button>
         </header>
 
-        <section className="modal-title-section">
-          <span className="modal-label">
-            Título do arquivo
-          </span>
-
-          <p className="modal-document-title">
-            {document.name}
-          </p>
-        </section>
-
         <section className="modal-main-info">
           <div className="modal-info-group">
-            <span className="modal-label">
-              Setor/Tipo
-            </span>
-
-            <span
-              className={`modal-info-badge ${
-                document.type === "Técnico"
-                  ? "type-técnico"
-                  : document.type === "Normativo"
-                  ? "type-normativo"
-                  : document.type === "Administrativo"
-                  ? "type-administrativo"
-                  : ""
-              }`}
-            >
-              {document.type}
-            </span>
+            <span className="modal-label">Setor</span>
+            <span className="modal-info-badge">{document.setor}</span>
           </div>
 
           <div className="modal-info-group">
-            <span className="modal-label">
-              Nível de Acesso
-            </span>
-
-            <span
-              className={`modal-info-badge ${
-                document.accessLevel === "Gestor"
-                  ? "access-gestor"
-                  : document.accessLevel === "Usuário"
-                  ? "access-usuário"
-                  : document.accessLevel === "Público"
-                  ? "access-público"
-                  : ""
-              }`}
-            >
-              {document.accessLevel}
-            </span>
-          </div>
-
-          <div className="modal-info-group">
-            <span className="modal-label">
-              Categoria
-            </span>
-
-            <span className="modal-info-badge modal-category-badge">
-              {document.category || document.type}
-            </span>
+            <span className="modal-label">Nivel de acesso</span>
+            <span className="modal-info-badge">{document.nivel}</span>
           </div>
         </section>
 
         <section className="modal-details">
           <div className="file-data-section">
-            <span className="section-title">
-              Dados do arquivo
-            </span>
+            <span className="section-title">Dados do arquivo</span>
 
             <div className="file-data-box">
               <div className="file-data-row">
-                <span>↻ Revisão:</span>
-
-                <strong>
-                  {document.revision || "5J"}
-                </strong>
+                <span>Tipo:</span>
+                <strong>{document.tipo_arquivo || "-"}</strong>
               </div>
 
               <div className="file-data-row">
-                <span>◷ Data de Atualização:</span>
-
-                <strong>
-                  {document.updatedAt}
-                </strong>
-              </div>
-
-              <div className="file-data-row">
-                <span>▤ Tamanho do arquivo:</span>
-
-                <strong>
-                  {document.fileSize || "66.8 MB"}
-                </strong>
+                <span>Data de atualizacao:</span>
+                <strong>{formatDate(document.data_atualizacao)}</strong>
               </div>
             </div>
           </div>
 
           <div className="tags-section">
-            <span className="section-title">
-              🏷 Tags
-            </span>
+            <span className="section-title">Tags</span>
 
             <div className="tags-box">
-              {tags.map((tag) => (
-                <span
-                  className="document-tag"
-                  key={tag}
-                >
-                  {tag}
-                </span>
-              ))}
+              {tags.length > 0 ? (
+                tags.map((tag) => (
+                  <span className="document-tag" key={tag.id_etiqueta}>
+                    {tag.nome}
+                  </span>
+                ))
+              ) : (
+                <span className="tags-empty">Nenhuma etiqueta atribuida.</span>
+              )}
             </div>
           </div>
         </section>
@@ -189,6 +111,7 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
         <footer className="modal-actions">
           <button
             className="modal-view-button"
+            disabled={!document.data}
             onClick={() => onViewPdf(document)}
           >
             <FiEye size={18} />

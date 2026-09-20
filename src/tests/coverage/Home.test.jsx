@@ -47,13 +47,16 @@ vi.mock("../../components/Pagination/Pagination", () => ({
 }));
 
 vi.mock("../../components/Document/DocumentModal/DocumentModal", () => ({
-  default: ({ document, error, loading, onClose, onRetry }) =>
+  default: ({ document, error, loading, onClose, onRetry, onViewPdf }) =>
     document || error || loading ? (
       <div>
         {loading && <span>Carregando detalhes</span>}
         {error && <button onClick={onRetry}>Tentar novamente</button>}
         {document && !loading && !error && (
-          <span>Detalhe: {document.nome}</span>
+          <>
+            <span>Detalhe: {document.nome}</span>
+            <button onClick={() => onViewPdf(document)}>Abrir PDF</button>
+          </>
         )}
         <button onClick={onClose}>Fechar modal</button>
       </div>
@@ -127,6 +130,7 @@ describe("Home", () => {
   });
 
   it("busca e exibe os detalhes do documento selecionado", async () => {
+    const windowOpen = vi.spyOn(window, "open").mockImplementation(() => null);
     fetchDocuments.mockResolvedValue({
       results: [
         {
@@ -154,10 +158,21 @@ describe("Home", () => {
     expect(screen.getByText("Carregando detalhes")).toBeInTheDocument();
 
     await act(async () => {
-      resolveDocumentDetails({ id_documento: 1, nome: "Documento completo" });
+      resolveDocumentDetails({
+        id_documento: 1,
+        nome: "Documento completo",
+        data: "http://localhost:8000/media/documentos/manual.pdf",
+      });
     });
 
     expect(screen.getByText("Detalhe: Documento completo")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Abrir PDF"));
+    expect(windowOpen).toHaveBeenCalledWith(
+      "http://localhost:8000/media/documentos/manual.pdf",
+      "_blank"
+    );
+
+    windowOpen.mockRestore();
   });
 
   it("permite tentar novamente ao falhar ao buscar os detalhes", async () => {
