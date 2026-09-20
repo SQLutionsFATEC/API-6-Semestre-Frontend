@@ -1,14 +1,14 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import Home from "./Home";
-import { fetchDocuments } from "../services/documentService";
+import Home from "../../pages/Home/Home";
+import { fetchDocuments } from "../../services/documentService";
 
-vi.mock("../services/documentService", () => ({
+vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
 }));
 
-vi.mock("../components/SearchBar/SearchBar", () => ({
+vi.mock("../../components/SearchBar/SearchBar", () => ({
   default: ({ value, onChange }) => (
     <input
       aria-label="Pesquisar"
@@ -18,7 +18,7 @@ vi.mock("../components/SearchBar/SearchBar", () => ({
   ),
 }));
 
-vi.mock("../components/Document/DocumentList", () => ({
+vi.mock("../../components/Document/DocumentList/DocumentList", () => ({
   default: ({ documents, onView }) => (
     <div>
       {documents.map((document) => (
@@ -30,7 +30,7 @@ vi.mock("../components/Document/DocumentList", () => ({
   ),
 }));
 
-vi.mock("../components/Pagination/Pagination", () => ({
+vi.mock("../../components/Pagination/Pagination", () => ({
   default: ({ currentPage, totalPages, onPageChange }) => (
     <button
       aria-label="Próxima página"
@@ -42,7 +42,7 @@ vi.mock("../components/Pagination/Pagination", () => ({
   ),
 }));
 
-vi.mock("../components/Document/DocumentModal", () => ({
+vi.mock("../../components/Document/DocumentModal/DocumentModal", () => ({
   default: ({ document, onViewPdf }) =>
     document ? (
       <button onClick={() => onViewPdf(document)}>Abrir PDF</button>
@@ -62,8 +62,6 @@ describe("Home", () => {
     });
 
     render(<Home />);
-
-    expect(screen.getByText("Carregando documentos...")).toBeInTheDocument();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(400);

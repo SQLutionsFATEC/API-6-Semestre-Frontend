@@ -1,13 +1,12 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import DocumentList from "./DocumentList";
+import DocumentList from "../../components/Document/DocumentList/DocumentList";
 
-vi.mock("./DocumentItem", () => ({
+vi.mock("../../components/Document/DocumentItem/DocumentItem", () => ({
   default: ({ document, onView }) => (
     <div data-testid="document-item">
-      <span>{document.name}</span>
+      <span>{document.nome}</span>
       <button onClick={() => onView(document)}>Visualizar</button>
     </div>
   ),
@@ -26,8 +25,8 @@ describe("DocumentList", () => {
 
   it("renderiza os documentos recebidos", () => {
     const documents = [
-      { id: 1, name: "Documento 1" },
-      { id: 2, name: "Documento 2" },
+      { id: 1, nome: "Documento 1" },
+      { id: 2, nome: "Documento 2" },
     ];
 
     render(<DocumentList documents={documents} onView={vi.fn()} />);
@@ -47,11 +46,11 @@ describe("DocumentList", () => {
 
   it("chama onView ao visualizar um documento", async () => {
     const onView = vi.fn();
-    const document = { id: 1, name: "Documento 1" };
+    const document = { id: 1, nome: "Documento 1" };
 
     render(<DocumentList documents={[document]} onView={onView} />);
 
-    await userEvent.click(screen.getByRole("button", { name: "Visualizar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
 
     expect(onView).toHaveBeenCalledWith(document);
   });

@@ -10,3 +10,9 @@ export async function fetchDocuments({ nome = "", page = 1 } = {}) {
 
   return response.data;
 }
+
+export async function fetchDocumentById(idDocumento) {
+  const response = await api.get(`/api/documentos/${idDocumento}/`);
+
+  return response.data;
+}
