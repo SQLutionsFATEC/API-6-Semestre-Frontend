@@ -1,12 +1,12 @@
 import { FiFileText, FiFilter, FiAlertCircle } from "react-icons/fi";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import SearchBar from "../../components/SearchBar/SearchBar";
 import DocumentList from "../../components/Document/DocumentList/DocumentList";
 import Pagination from "../../components/Pagination/Pagination";
 import DocumentModal from "../../components/Document/DocumentModal/DocumentModal";
 
-import { fetchDocuments } from "../../services/documentService";
+import { fetchDocumentById, fetchDocuments } from "../../services/documentService";
 
 import "./Home.css";
 
@@ -18,6 +18,9 @@ function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [documentDetailsLoading, setDocumentDetailsLoading] = useState(false);
+  const [documentDetailsError, setDocumentDetailsError] = useState(null);
+  const detailRequestId = useRef(0);
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -64,6 +67,48 @@ function Home() {
     console.log("PDF ainda não disponível:", document.nome);
   }
 
+  async function loadDocumentDetails(idDocumento) {
+    const requestId = ++detailRequestId.current;
+
+    setDocumentDetailsLoading(true);
+    setDocumentDetailsError(null);
+
+    try {
+      const document = await fetchDocumentById(idDocumento);
+
+      if (requestId === detailRequestId.current) {
+        setSelectedDocument(document);
+      }
+    } catch (err) {
+      if (requestId === detailRequestId.current) {
+        console.error("Erro ao buscar detalhes do documento:", err);
+        setDocumentDetailsError("NÃ£o foi possÃ­vel carregar os detalhes do documento.");
+      }
+    } finally {
+      if (requestId === detailRequestId.current) {
+        setDocumentDetailsLoading(false);
+      }
+    }
+  }
+
+  function handleOpenDocument(document) {
+    setSelectedDocument(document);
+    loadDocumentDetails(document.id_documento);
+  }
+
+  function handleCloseDocumentModal() {
+    detailRequestId.current += 1;
+    setSelectedDocument(null);
+    setDocumentDetailsLoading(false);
+    setDocumentDetailsError(null);
+  }
+
+  function handleRetryDocumentDetails() {
+    if (selectedDocument?.id_documento) {
+      loadDocumentDetails(selectedDocument.id_documento);
+    }
+  }
+
   return (
     <div className="home">
       <header className="page-header">
@@ -100,7 +145,7 @@ function Home() {
           <>
             <DocumentList
               documents={documents}
-              onView={setSelectedDocument}
+              onView={handleOpenDocument}
             />
             <Pagination
               currentPage={currentPage}
@@ -113,7 +158,10 @@ function Home() {
 
       <DocumentModal
         document={selectedDocument}
-        onClose={() => setSelectedDocument(null)}
+        loading={documentDetailsLoading}
+        error={documentDetailsError}
+        onClose={handleCloseDocumentModal}
+        onRetry={handleRetryDocumentDetails}
         onViewPdf={handleViewPdf}
       />
     </div>

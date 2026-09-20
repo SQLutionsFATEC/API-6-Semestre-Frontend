@@ -1,7 +1,33 @@
 import { FiEye } from "react-icons/fi";
 import "./DocumentModal.css";
 
-function DocumentModal({ document, onClose, onViewPdf }) {
+function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }) {
+  if (loading || error) {
+    return (
+      <div className="document-modal-overlay" onClick={onClose}>
+        <div
+          className="document-modal"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <button className="modal-close" onClick={onClose} aria-label="Fechar">
+            Ã—
+          </button>
+
+          {loading ? (
+            <p role="status">Carregando detalhes do documento...</p>
+          ) : (
+            <div role="alert">
+              <p>{error}</p>
+              <button className="modal-view-button" onClick={onRetry}>
+                Tentar novamente
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (!document) {
     return null;
   }

@@ -15,11 +15,11 @@ function formatarData(dataISO) {
 }
 
 function DocumentItem({ document, onView }) {
-  const typeClass = document.type
+  const typeClass = document.setor
     ?.toLowerCase()
     .replace(/\s+/g, "-");
 
-  const accessClass = document.accessLevel
+  const accessClass = document.nivel
     ?.toLowerCase()
     .replace(/\s+/g, "-");
 

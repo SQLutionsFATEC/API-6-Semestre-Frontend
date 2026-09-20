@@ -25,8 +25,8 @@ describe("DocumentList", () => {
 
   it("renderiza os documentos recebidos", () => {
     const documents = [
-      { id: 1, nome: "Documento 1" },
-      { id: 2, nome: "Documento 2" },
+      { id_documento: 1, nome: "Documento 1" },
+      { id_documento: 2, nome: "Documento 2" },
     ];
 
     render(<DocumentList documents={documents} onView={vi.fn()} />);
@@ -46,7 +46,7 @@ describe("DocumentList", () => {
 
   it("chama onView ao visualizar um documento", async () => {
     const onView = vi.fn();
-    const document = { id: 1, nome: "Documento 1" };
+    const document = { id_documento: 1, nome: "Documento 1" };
 
     render(<DocumentList documents={[document]} onView={onView} />);
 
