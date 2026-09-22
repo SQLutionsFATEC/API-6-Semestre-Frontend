@@ -73,4 +73,64 @@ describe("DocumentModal", () => {
 
     expect(screen.getByRole("button", { name: "Visualizar" })).toBeDisabled();
   });
+
+  it("exibe o estado de carregamento", () => {
+    renderModal({ loading: true });
+
+    expect(
+      screen.getByText("Carregando detalhes do documento...")
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Manual de teste.pdf")).not.toBeInTheDocument();
+  });
+
+  it("exibe o erro e permite tentar novamente", () => {
+    const onRetry = vi.fn();
+    renderModal({ error: "Falha ao carregar detalhes.", onRetry });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Falha ao carregar detalhes."
+    );
+
+    fireEvent.click(screen.getByText("Tentar novamente"));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("permite fechar o modal durante o carregamento", () => {
+    const onClose = vi.fn();
+    renderModal({ loading: true, onClose });
+
+    fireEvent.click(screen.getByLabelText("Fechar"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("nao renderiza nada sem documento", () => {
+    const { container } = renderModal({ document: null });
+
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("usa o badge padrao quando o tipo de arquivo esta ausente", () => {
+    renderModal({ document: { ...documentData, tipo_arquivo: undefined } });
+
+    expect(screen.getByText("ARQUIVO")).toBeInTheDocument();
+  });
+
+  it("formata a data de atualizacao e trata valores invalidos", () => {
+    renderModal({ document: { ...documentData, data_atualizacao: "2026-01-05T10:00:00Z" } });
+    expect(screen.getByText("05/01/2026")).toBeInTheDocument();
+
+    renderModal({ document: { ...documentData, data_atualizacao: "data-invalida" } });
+    expect(screen.getByText("data-invalida")).toBeInTheDocument();
+
+    renderModal({ document: { ...documentData, data_atualizacao: "" } });
+    expect(screen.getByText("-")).toBeInTheDocument();
+  });
+
+  it("fecha pelo clique no overlay mesmo em estado de erro", () => {
+    const onClose = vi.fn();
+    renderModal({ error: "Falha", onClose });
+
+    fireEvent.click(globalThis.document.querySelector(".document-modal-overlay"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
