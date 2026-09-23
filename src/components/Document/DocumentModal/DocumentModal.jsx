@@ -1,4 +1,4 @@
-import { FiEye } from "react-icons/fi";
+import { FiEye, FiX } from "react-icons/fi";
 import "./DocumentModal.css";
 
 function formatDate(value) {
@@ -20,7 +20,7 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
       <div className="document-modal-overlay" onClick={onClose}>
         <div className="document-modal" onClick={(event) => event.stopPropagation()}>
           <button className="modal-close" onClick={onClose} aria-label="Fechar">
-            X
+            <FiX size={18} />
           </button>
 
           {loading ? (
@@ -58,7 +58,7 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
           </div>
 
           <button className="modal-close" onClick={onClose} aria-label="Fechar">
-            X
+            <FiX size={18} />
           </button>
         </header>
 
