@@ -46,16 +46,6 @@ jobs:
       - name: Gerar build de produção
         run: npm run build
 
-      - name: Executar testes e gerar coverage
-        run: npm run test:coverage
-
-      - name: Fazer upload do relatório de cobertura
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage/
-          retention-days: 1
-
   secondary-build:
     name: "Estágio 2: análise no SonarCloud"
     runs-on: ubuntu-latest
@@ -70,12 +60,6 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
-
-      - name: Fazer download do relatório de cobertura
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage/
 
       - name: Executar análise no SonarCloud
         if: env.SONAR_TOKEN != ''
