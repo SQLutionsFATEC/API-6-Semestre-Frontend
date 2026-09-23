@@ -15,10 +15,30 @@ function formatDate(value) {
 }
 
 function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }) {
+  
+  const handleOverlayClick = (event) => {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === "Escape" || event.key === "Enter") {
+      onClose();
+    }
+  };
+
   if (loading || error) {
     return (
-      <div className="document-modal-overlay" onClick={onClose}>
-        <div className="document-modal" onClick={(event) => event.stopPropagation()}>
+      <div 
+        className="document-modal-overlay" 
+        onClick={handleOverlayClick}
+        onKeyDown={handleKeyDown}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={0}
+      >
+        <div className="document-modal">
           <button className="modal-close" onClick={onClose} aria-label="Fechar">
             <FiX size={18} aria-hidden="true" />
           </button>
@@ -43,8 +63,15 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
   const tags = document.etiquetas || [];
 
   return (
-    <div className="document-modal-overlay" onClick={onClose}>
-      <div className="document-modal" onClick={(event) => event.stopPropagation()}>
+    <div 
+      className="document-modal-overlay" 
+      onClick={handleOverlayClick}
+      onKeyDown={handleKeyDown}
+      role="dialog"
+      aria-modal="true"
+      tabIndex={0}
+    >
+      <div className="document-modal">
         <header className="modal-top">
           <div className="modal-code-section">
             <span className="modal-label">Arquivo</span>
