@@ -1,4 +1,4 @@
-import DocumentItem from "./DocumentItem";
+import DocumentItem from "../DocumentItem/DocumentItem";
 
 import "./DocumentList.css";
 
@@ -20,7 +20,7 @@ function DocumentList({ documents, onView }) {
         {documents.length > 0 ? (
           documents.map((document) => (
             <DocumentItem
-              key={document.id}
+              key={document.id_documento}
               document={document}
               onView={onView}
             />
