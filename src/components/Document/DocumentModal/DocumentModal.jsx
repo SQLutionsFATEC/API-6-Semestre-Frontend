@@ -23,7 +23,7 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
   };
 
   const handleKeyDown = (event) => {
-    if (event.key === "Escape" || event.key === "Enter") {
+    if (event.key === "Escape") {
       onClose();
     }
   };
@@ -36,7 +36,6 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
         onKeyDown={handleKeyDown}
         role="dialog"
         aria-modal="true"
-        tabIndex={0}
       >
         <div className="document-modal">
           <button className="modal-close" onClick={onClose} aria-label="Fechar">
@@ -69,7 +68,6 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
       onKeyDown={handleKeyDown}
       role="dialog"
       aria-modal="true"
-      tabIndex={0}
     >
       <div className="document-modal">
         <header className="modal-top">
