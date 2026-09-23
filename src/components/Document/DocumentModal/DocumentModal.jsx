@@ -20,7 +20,7 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
       <div className="document-modal-overlay" onClick={onClose}>
         <div className="document-modal" onClick={(event) => event.stopPropagation()}>
           <button className="modal-close" onClick={onClose} aria-label="Fechar">
-            <FiX size={18} />
+            <FiX size={18} aria-hidden="true" />
           </button>
 
           {loading ? (
@@ -58,7 +58,7 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
           </div>
 
           <button className="modal-close" onClick={onClose} aria-label="Fechar">
-            <FiX size={18} />
+            <FiX size={18} aria-hidden="true" />
           </button>
         </header>
 
@@ -114,7 +114,7 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
             disabled={!document.data}
             onClick={() => onViewPdf(document)}
           >
-            <FiEye size={18} />
+            <FiEye size={18} aria-hidden="true" />
             Visualizar
           </button>
         </footer>
