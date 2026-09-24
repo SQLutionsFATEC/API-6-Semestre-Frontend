@@ -51,6 +51,8 @@ function openFirstDocument() {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
+
   vi.mocked(fetchDocuments).mockResolvedValue(documentsPage);
   vi.mocked(fetchDocumentById).mockResolvedValue(documentDetail);
 });
