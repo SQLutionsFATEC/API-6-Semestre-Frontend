@@ -4,12 +4,17 @@ on:
   push:
     branches:
       - main
-      - "develop-*"
+      - develop-1
+
   pull_request:
     branches:
       - main
-      - "develop-*"
-    types: [opened, synchronize, reopened]
+      - develop-1
+    types:
+      - opened
+      - synchronize
+      - reopened
+
   workflow_dispatch:
 
 permissions:
@@ -21,53 +26,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  commit-build:
-    name: "Estágio 1: qualidade e build"
+  frontend-ci:
+    name: Tests, Build and SonarCloud
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Checkout do código
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
 
-      - name: Configurar Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Instalar dependências
+      - name: Install dependencies
         run: npm ci
 
-      - name: Executar análise estática com ESLint
+      - name: Run ESLint
         run: npm run lint
 
-      - name: Gerar build de produção
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Build production application
         run: npm run build
 
-  secondary-build:
-    name: "Estágio 2: análise no SonarCloud"
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: commit-build
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify coverage report
+        run: |
+          test -f coverage/lcov.info
+          echo "LCOV coverage report generated successfully."
+          ls -lh coverage/lcov.info
 
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          fetch-depth: 0
-
-      - name: Executar análise no SonarCloud
-        if: env.SONAR_TOKEN != ''
-        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
+      - name: Run SonarCloud analysis
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995
         env:
-          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Informar ausência do token do SonarCloud
-        if: env.SONAR_TOKEN == ''
-        run: echo "::notice::SonarCloud não executado porque o secret SONAR_TOKEN não está disponível."
