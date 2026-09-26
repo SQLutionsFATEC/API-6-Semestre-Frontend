@@ -1,11 +1,18 @@
 import api from "./api";
 
-export async function fetchDocuments({ nome = "", page = 1 } = {}) {
+export async function fetchDocuments({
+  nome = "",
+  contexto = "",
+  page = 1,
+} = {}) {
   const response = await api.get("/api/documentos/", {
     params: {
       nome: nome,
       etiquetas: nome,   
       page: page,
+    },
+    data: {
+      contexto: contexto,
     },
   });
 
