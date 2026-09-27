@@ -1,0 +1,21 @@
+.layout {
+  display: flex;
+
+  min-height: 100vh;
+
+  background: #ffffff;
+}
+
+.layout-content {
+  flex: 1;
+
+  min-width: 0;
+
+  padding: 40px 25px 20px;
+}
+
+@media (max-width: 900px) {
+  .layout-content {
+    padding: 30px 20px 20px;
+  }
+}
