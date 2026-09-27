@@ -83,6 +83,7 @@ describe("Home", () => {
 
     expect(fetchDocuments).toHaveBeenCalledWith({
       nome: "",
+      contexto: "",
       page: 1,
     });
     expect(screen.getByText("Documento 1")).toBeInTheDocument();
@@ -125,6 +126,7 @@ describe("Home", () => {
 
     expect(fetchDocuments).toHaveBeenLastCalledWith({
       nome: "relatório",
+      contexto: "relatório",
       page: 1,
     });
   });
@@ -190,17 +192,23 @@ describe("Home", () => {
       await vi.advanceTimersByTimeAsync(400);
     });
 
-    fireEvent.click(screen.getByText("Documento 1"));
-
-    await act(async () => {});
+    await act(async () => {
+      fireEvent.click(screen.getByText("Documento 1"));
+      await Promise.resolve();
+    });
 
     expect(screen.getByText("Tentar novamente")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Tentar novamente"));
 
-    await act(async () => {});
+    await act(async () => {
+      fireEvent.click(screen.getByText("Tentar novamente"));
+      await Promise.resolve();
+    });
+
+    expect(
+      screen.getByText("Detalhe: Documento completo")
+    ).toBeInTheDocument();
 
     expect(fetchDocumentById).toHaveBeenCalledTimes(2);
-    expect(screen.getByText("Detalhe: Documento completo")).toBeInTheDocument();
   });
 
   it("ignora a resposta de detalhes depois que o modal Ã© fechado", async () => {

@@ -30,6 +30,7 @@ function Home() {
       try {
         const data = await fetchDocuments({
           nome: search,
+          contexto: search,
           page: currentPage,
         });
         console.log(data);

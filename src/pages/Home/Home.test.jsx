@@ -65,7 +65,11 @@ describe("Home", () => {
       expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
     });
     expect(screen.getByText("Ata de reuniao.docx")).toBeInTheDocument();
-    expect(fetchDocuments).toHaveBeenCalledWith({ nome: "", page: 1 });
+    expect(fetchDocuments).toHaveBeenCalledWith({
+      nome: "",
+      contexto: "",
+      page: 1,
+    });
   });
 
   it("exibe mensagem de erro quando a busca falha", async () => {
@@ -94,7 +98,11 @@ describe("Home", () => {
     });
 
     await waitFor(() => {
-      expect(fetchDocuments).toHaveBeenLastCalledWith({ nome: "manual", page: 1 });
+      expect(fetchDocuments).toHaveBeenLastCalledWith({
+        nome: "manual",
+        contexto: "manual",
+        page: 1,
+      });
     });
   });
 
@@ -108,7 +116,11 @@ describe("Home", () => {
     fireEvent.click(screen.getByRole("button", { name: "Próxima página" }));
 
     await waitFor(() => {
-      expect(fetchDocuments).toHaveBeenLastCalledWith({ nome: "", page: 2 });
+      expect(fetchDocuments).toHaveBeenLastCalledWith({
+        nome: "",
+        contexto: "",
+        page: 2,
+      });
     });
   });
 
