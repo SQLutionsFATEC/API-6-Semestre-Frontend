@@ -5,15 +5,18 @@ export async function fetchDocuments({
   contexto = "",
   page = 1,
 } = {}) {
+  const params = {
+    nome: nome,
+    etiquetas: nome,
+    page: page,
+  };
+
+  if (contexto !== "") {
+    params.contexto = contexto;
+  }
+
   const response = await api.get("/api/documentos/", {
-    params: {
-      nome: nome,
-      etiquetas: nome,   
-      page: page,
-    },
-    data: {
-      contexto: contexto,
-    },
+    params,
   });
 
   return response.data;

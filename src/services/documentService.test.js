@@ -36,14 +36,12 @@ describe("fetchDocuments", () => {
         nome: "manual",
         etiquetas: "manual",
         page: 1,
-      },
-      data: {
         contexto: "manual",
       },
     });
   });
 
-  it("usa os valores padrão quando nenhum parâmetro é informado", async () => {
+  it("não envia contexto quando ele está vazio", async () => {
     const responseData = {
       pages: 1,
       results: [],
@@ -51,16 +49,19 @@ describe("fetchDocuments", () => {
 
     api.get.mockResolvedValue({ data: responseData });
 
-    await expect(fetchDocuments()).resolves.toEqual(responseData);
+    await expect(
+      fetchDocuments({
+        nome: "",
+        contexto: "",
+        page: 1,
+      })
+    ).resolves.toEqual(responseData);
 
     expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
       params: {
         nome: "",
         etiquetas: "",
         page: 1,
-      },
-      data: {
-        contexto: "",
       },
     });
   });
