@@ -1,21 +1,17 @@
 .layout {
   display: flex;
-
   min-height: 100vh;
-
-  background: #ffffff;
+  background: #f8fafc;
 }
 
 .layout-content {
   flex: 1;
-
   min-width: 0;
-
-  padding: 40px 25px 20px;
+  padding: 36px 36px 28px;
 }
 
 @media (max-width: 900px) {
   .layout-content {
-    padding: 30px 20px 20px;
+    padding: 24px 18px 20px;
   }
 }
