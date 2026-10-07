@@ -29,7 +29,7 @@ function Sidebar({ onOpenUploadModal }) {
 
         <nav className="sidebar-menu">
           <button className="sidebar-item active">
-            <FiFileText size={20} />
+            <FiFileText size={18} />
             Documentos
           </button>
         </nav>
@@ -42,19 +42,19 @@ function Sidebar({ onOpenUploadModal }) {
             aria-label="Cadastrar documento"
           >
             <div className="sidebar-upload-content">
-              <FiUploadCloud size={22} className="sidebar-upload-icon" />
+              <FiUploadCloud size={20} className="sidebar-upload-icon" />
               <div className="sidebar-upload-text">
                 <span>Cadastrar</span>
                 <span>documento</span>
               </div>
             </div>
-            <FiChevronRight size={18} className="sidebar-chevron-icon" />
+            <FiChevronRight size={16} className="sidebar-chevron-icon" />
           </button>
         </div>
 
         <div className="sidebar-footer">
           <button type="button" className="logout-button">
-            <FiLogOut size={20} />
+            <FiLogOut size={18} />
             Deslogar
           </button>
         </div>
