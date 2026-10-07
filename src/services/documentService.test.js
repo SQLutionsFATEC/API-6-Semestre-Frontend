@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import api from "./api";
-import { fetchDocumentById, fetchDocuments } from "./documentService";
+import {
+  createDocument,
+  fetchDocumentById,
+  fetchDocuments,
+} from "./documentService";
 
 vi.mock("./api", () => ({
   default: {
@@ -81,3 +85,22 @@ describe("fetchDocumentById", () => {
     expect(api.get).toHaveBeenCalledWith("/api/documentos/42/");
   });
 });
+
+describe("createDocument", () => {
+  it("mocka a criação do documento e retorna os dados formatados", async () => {
+    const file = new File(["teste"], "doc.pdf", { type: "application/pdf" });
+    const result = await createDocument({
+      nome: "doc.pdf",
+      setor: "Técnico",
+      nivel: "Básico",
+      file,
+    });
+
+    expect(result).toHaveProperty("id_documento");
+    expect(result.nome).toBe("doc.pdf");
+    expect(result.setor).toBe("Técnico");
+    expect(result.nivel).toBe("Básico");
+    expect(result.tipo_arquivo).toBe("pdf");
+    expect(result.etiquetas).toEqual([{ id_etiqueta: 1, nome: "Técnico" }]);
+  });
+});

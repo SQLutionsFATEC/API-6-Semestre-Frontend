@@ -24,7 +24,7 @@ function DocumentItem({ document, onView }) {
     .replace(/\s+/g, "-");
 
   return (
-    <div className="document-item">
+    <div className="document-item" onClick={() => onView(document)}>
       <div className="document-file">
         <span>{document.tipo_arquivo}</span>
       </div>
@@ -52,7 +52,6 @@ function DocumentItem({ document, onView }) {
       <div className="document-action">
         <button onClick={() => onView(document)}>
           <FiEye size={17} />
-          Visualizar
         </button>
       </div>
     </div>
