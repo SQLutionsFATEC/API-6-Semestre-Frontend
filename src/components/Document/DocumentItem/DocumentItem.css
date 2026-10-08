@@ -21,6 +21,11 @@
   transform: translateY(-1px);
 }
 
+.document-item.document-restricted:hover {
+  border-color: #fecdd3;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.06);
+}
+
 /* ARQUIVO BADGE */
 .document-file {
   display: flex;
@@ -141,9 +146,9 @@
 .access-publico,
 .access-básico,
 .access-basico {
-  background-color: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #dbeafe;
+  background-color: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #dcfce7;
 }
 
 /* Fallback nível */
@@ -159,6 +164,18 @@
   background-color: #f8fafc;
   color: #475569;
   border: 1px solid #e2e8f0;
+}
+
+.access-lock-icon {
+  margin-right: 5px;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.access-badge.access-restricted {
+  background-color: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
 }
 
 /* AÇÃO */
@@ -192,8 +209,32 @@
   transform: translateY(-1px);
 }
 
+.document-action button.action-locked {
+  color: #be123c;
+  background-color: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.document-action button.action-locked:hover {
+  background-color: #ffe4e6;
+  border-color: #fda4af;
+  color: #9f1239;
+}
+
 .document-action button svg {
-  color: #2563eb;
+  color: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 @media (max-width: 900px) {

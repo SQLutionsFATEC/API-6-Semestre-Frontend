@@ -1,5 +1,7 @@
 import {
   FiEye,
+  FiLock,
+  FiCheckCircle,
   FiX,
   FiInfo,
   FiTag,
@@ -40,15 +42,15 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
 
   if (loading || error) {
     return (
-      <div 
-        className="document-modal-overlay" 
+      <div
+        className="document-modal-overlay"
         onClick={handleOverlayClick}
         onKeyDown={handleKeyDown}
         role="dialog"
         aria-modal="true"
       >
         <div className="document-modal">
-          <button className="modal-close" onClick={onClose} aria-label="Fechar">
+          <button className="modal-close cursor-pointer" onClick={onClose} aria-label="Fechar">
             <FiX size={18} aria-hidden="true" />
           </button>
 
@@ -59,7 +61,7 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
           ) : (
             <div role="alert" className="modal-error-container">
               <p>{error}</p>
-              <button className="modal-view-button" onClick={onRetry}>
+              <button className="modal-view-button cursor-pointer" onClick={onRetry}>
                 Tentar novamente
               </button>
             </div>
@@ -74,8 +76,8 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
   const tags = document.etiquetas || [];
 
   return (
-    <div 
-      className="document-modal-overlay" 
+    <div
+      className="document-modal-overlay"
       onClick={handleOverlayClick}
       onKeyDown={handleKeyDown}
       role="dialog"
@@ -92,10 +94,21 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
                 <FiFileText size={14} className="badge-icon" />
                 {document.tipo_arquivo?.toUpperCase() || "ARQUIVO"}
               </span>
+              {document.acesso_permitido === false ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                  <FiLock size={12} className="text-rose-600" />
+                  Acesso Bloqueado
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <FiCheckCircle size={12} className="text-emerald-600" />
+                  Acesso Liberado
+                </span>
+              )}
             </div>
           </div>
 
-          <button className="modal-close" onClick={onClose} aria-label="Fechar">
+          <button className="modal-close cursor-pointer" onClick={onClose} aria-label="Fechar">
             <FiX size={18} aria-hidden="true" />
           </button>
         </header>
@@ -113,12 +126,18 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
           </div>
 
           <div className="modal-stat-card">
-            <div className="stat-icon-badge stat-purple">
-              <FiShield size={18} />
+            <div className={`stat-icon-badge ${document.acesso_permitido === false ? "stat-red" : "stat-purple"}`}>
+              {document.acesso_permitido === false ? (
+                <FiLock size={18} />
+              ) : (
+                <FiShield size={18} />
+              )}
             </div>
             <div className="stat-info">
               <span className="stat-label">Nível de acesso</span>
-              <strong className="stat-value">{document.nivel || "-"}</strong>
+              <div className="flex items-center gap-2 flex-wrap">
+                <strong className="stat-value">{document.nivel || "-"}</strong>
+              </div>
             </div>
           </div>
 
@@ -142,6 +161,21 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
             </div>
           </div>
         </div>
+
+        {/* AVISO DE ACESSO BLOQUEADO SE APLICÁVEL */}
+        {document.acesso_permitido === false && (
+          <div className="mb-4 flex items-center gap-3 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-sm">
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-100 text-rose-700 shrink-0">
+              <FiLock size={18} />
+            </div>
+            <div className="flex-1 text-left">
+              <strong className="block font-semibold text-rose-900">Documento com Acesso Restrito</strong>
+              <span className="text-xs text-rose-700">
+                Seu usuário não possui permissão para visualizar o conteúdo deste documento.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* SEÇÃO PRINCIPAL (2 COLUNAS) */}
         <div className="modal-body-grid">
@@ -230,21 +264,33 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
         <footer className="modal-actions">
           <button
             type="button"
-            className="modal-view-button"
-            disabled={!document.data}
+            className={`modal-view-button cursor-pointer ${document.acesso_permitido === false ? "modal-view-locked" : ""}`}
+            disabled={!document.data && document.acesso_permitido !== false}
             onClick={() => onViewPdf(document)}
             aria-label="Visualizar"
           >
-            <FiEye size={17} aria-hidden="true" />
+            {document.acesso_permitido === false ? (
+              <FiLock size={17} aria-hidden="true" />
+            ) : (
+              <FiEye size={17} aria-hidden="true" />
+            )}
             Visualizar
           </button>
 
           <button
             type="button"
-            className="modal-edit-button"
+            className={`modal-edit-button ${
+              document.acesso_permitido === false ? "opacity-50 cursor-not-allowed!" : "cursor-pointer"
+            }`}
+            disabled={document.acesso_permitido === false}
             onClick={() => console.log("Editar documento")}
+            title={document.acesso_permitido === false ? "Edição bloqueada" : "Editar documento"}
           >
-            <FiEdit3 size={15} />
+            {document.acesso_permitido === false ? (
+              <FiLock size={15} aria-hidden="true" />
+            ) : (
+              <FiEdit3 size={15} />
+            )}
             Editar documento
           </button>
         </footer>
