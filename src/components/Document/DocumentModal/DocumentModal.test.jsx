@@ -133,4 +133,52 @@ describe("DocumentModal", () => {
     fireEvent.click(globalThis.document.querySelector(".document-modal-overlay"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("exibe badge e indicador visual de acesso bloqueado quando acesso_permitido e false", () => {
+    renderModal({
+      document: {
+        ...documentData,
+        acesso_permitido: false,
+      },
+    });
+
+    expect(screen.getByText("Acesso Bloqueado")).toBeInTheDocument();
+    expect(screen.getByText("Documento com Acesso Restrito")).toBeInTheDocument();
+  });
+
+  it("exibe badge de acesso liberado quando acesso_permitido e true", () => {
+    renderModal({
+      document: {
+        ...documentData,
+        acesso_permitido: true,
+      },
+    });
+
+    expect(screen.getByText("Acesso Liberado")).toBeInTheDocument();
+  });
+
+  it("desabilita o botão de editar quando o documento é restrito", () => {
+    renderModal({
+      document: {
+        ...documentData,
+        acesso_permitido: false,
+      },
+    });
+
+    const editButton = screen.getByRole("button", { name: /editar documento/i });
+    expect(editButton).toBeDisabled();
+    expect(editButton).toHaveAttribute("title", "Edição bloqueada");
+  });
+
+  it("mantém o botão de editar habilitado quando o documento é liberado", () => {
+    renderModal({
+      document: {
+        ...documentData,
+        acesso_permitido: true,
+      },
+    });
+
+    const editButton = screen.getByRole("button", { name: /editar documento/i });
+    expect(editButton).not.toBeDisabled();
+  });
 });

@@ -447,6 +447,18 @@
   cursor: not-allowed;
 }
 
+.modal-view-button.modal-view-locked {
+  border-color: #be123c;
+  color: #be123c;
+  background-color: #fff1f2;
+}
+
+.modal-view-button.modal-view-locked:hover:not(:disabled) {
+  background-color: #ffe4e6;
+  border-color: #fda4af;
+  color: #9f1239;
+}
+
 .modal-edit-button {
   display: inline-flex;
   align-items: center;
@@ -464,9 +476,14 @@
   transition: all 0.15s ease;
 }
 
-.modal-edit-button:hover {
+.modal-edit-button:hover:not(:disabled) {
   background: #60001e;
   border-color: #60001e;
+}
+
+.modal-edit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ESTADOS DE CARREGAMENTO E ERRO */

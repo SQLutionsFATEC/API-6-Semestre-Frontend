@@ -2,7 +2,7 @@ import { FiFile, FiFileText, FiFolder, FiCalendar, FiShield } from "react-icons/
 import DocumentItem from "../DocumentItem/DocumentItem";
 import "./DocumentList.css";
 
-function DocumentList({ documents, onView }) {
+function DocumentList({ documents, onView, onOpenDetails }) {
   return (
     <div className="document-list">
       <div className="document-list-header">
@@ -38,6 +38,7 @@ function DocumentList({ documents, onView }) {
               key={document.id_documento}
               document={document}
               onView={onView}
+              onOpenDetails={onOpenDetails}
             />
           ))
         ) : (
