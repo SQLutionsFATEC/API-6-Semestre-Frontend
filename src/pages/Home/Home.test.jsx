@@ -17,7 +17,9 @@ const documentsPage = {
       nome: "Manual do sistema.pdf",
       setor: "Engenharia",
       data_atualizacao: "2026-09-20T12:00:00Z",
-      nivel: "Publico",
+      nivel: "Básico",
+      data: "http://localhost:8000/media/documentos/manual.pdf",
+      acesso_permitido: true,
     },
     {
       id_documento: 2,
@@ -25,7 +27,18 @@ const documentsPage = {
       nome: "Ata de reuniao.docx",
       setor: "Administrativo",
       data_atualizacao: "2026-08-01T09:00:00Z",
-      nivel: "Interno",
+      nivel: "Comercial",
+      acesso_permitido: true,
+    },
+    {
+      id_documento: 3,
+      tipo_arquivo: "pdf",
+      nome: "Plano Militar Confidencial.pdf",
+      setor: "Defesa",
+      data_atualizacao: "2026-07-15T09:00:00Z",
+      nivel: "Militar",
+      data: "http://localhost:8000/media/documentos/militar.pdf",
+      acesso_permitido: false,
     },
   ],
   pages: 2,
@@ -37,8 +50,9 @@ const documentDetail = {
   tipo_arquivo: "pdf",
   setor: "Engenharia",
   data_atualizacao: "2026-09-20T12:00:00Z",
-  nivel: "Publico",
+  nivel: "Básico",
   data: "http://localhost:8000/media/documentos/manual.pdf",
+  acesso_permitido: true,
   etiquetas: [{ id_etiqueta: 1, nome: "Tecnico" }],
 };
 
@@ -47,7 +61,7 @@ function getModal() {
 }
 
 function openFirstDocument() {
-  fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
+  fireEvent.click(screen.getByText("Manual do sistema.pdf"));
 }
 
 beforeEach(() => {
@@ -136,7 +150,7 @@ describe("Home", () => {
     expect(fetchDocuments).toHaveBeenCalledTimes(1);
   });
 
-  it("abre o modal com os detalhes do documento selecionado", async () => {
+  it("abre o modal com os detalhes do documento selecionado ao clicar no cartão", async () => {
     render(<Home />);
 
     await waitFor(() => {
@@ -152,6 +166,25 @@ describe("Home", () => {
     });
     expect(fetchDocumentById).toHaveBeenCalledWith(1);
     expect(screen.getByText("Tecnico")).toBeInTheDocument();
+  });
+
+  it("abre o PDF diretamente ao clicar no botão de visualizar do cartão", async () => {
+    const openSpy = vi
+      .spyOn(window, "open")
+      .mockImplementation(() => null);
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
+
+    expect(openSpy).toHaveBeenCalledWith(documentsPage.results[0].data, "_blank");
+    expect(fetchDocumentById).not.toHaveBeenCalled();
+
+    openSpy.mockRestore();
   });
 
   it("abre o modal direto quando ja existe documento selecionado", async () => {
@@ -184,7 +217,7 @@ describe("Home", () => {
       expect(screen.getByRole("alert")).toBeInTheDocument();
     });
     expect(
-      screen.getByText("NÃ£o foi possÃ­vel carregar os detalhes do documento.")
+      screen.getByText("Não foi possível carregar os detalhes do documento.")
     ).toBeInTheDocument();
 
     vi.mocked(fetchDocumentById).mockResolvedValue(documentDetail);
@@ -275,5 +308,94 @@ describe("Home", () => {
 
     openSpy.mockRestore();
     consoleSpy.mockRestore();
+  });
+
+  it("documentos restritos exibem inequivocamente o ícone de cadeado", async () => {
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Plano Militar Confidencial.pdf")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("lock-icon")).toBeInTheDocument();
+  });
+
+  it("ao clicar no cartão de documento restrito, abre o modal exibindo o indicativo de acesso bloqueado", async () => {
+    vi.mocked(fetchDocumentById).mockResolvedValue({
+      ...documentsPage.results[2],
+      descricao: "Documento restrito teste",
+    });
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Plano Militar Confidencial.pdf")).toBeInTheDocument();
+    });
+
+    // Clica no cartão do documento bloqueado
+    fireEvent.click(screen.getByText("Plano Militar Confidencial.pdf"));
+
+    // O modal de detalhes deve abrir e mostrar o indicativo de bloqueio
+    await waitFor(() => {
+      expect(getModal()).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Acesso Bloqueado")).toBeInTheDocument();
+    expect(screen.getByText("Documento com Acesso Restrito")).toBeInTheDocument();
+  });
+
+  it("ao clicar no botão de cadeado de um documento restrito, abre o modal de detalhes com o indicativo de bloqueio", async () => {
+    vi.mocked(fetchDocumentById).mockResolvedValue({
+      ...documentsPage.results[2],
+      descricao: "Documento restrito teste",
+    });
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Plano Militar Confidencial.pdf")).toBeInTheDocument();
+    });
+
+    const buttons = screen.getAllByRole("button", { name: "Visualizar" });
+    const restrictedButton = buttons[2]; // Terceiro documento é restrito
+
+    fireEvent.click(restrictedButton);
+
+    // O modal de detalhes deve abrir normalmente
+    await waitFor(() => {
+      expect(getModal()).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Acesso Bloqueado")).toBeInTheDocument();
+  });
+
+  it("ao tentar visualizar documento restrito pelo modal de detalhes, exibe o modal de acesso restrito e não abre o link", async () => {
+    vi.mocked(fetchDocumentById).mockResolvedValue({
+      ...documentDetail,
+      acesso_permitido: false,
+    });
+
+    const openSpy = vi
+      .spyOn(window, "open")
+      .mockImplementation(() => null);
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
+    });
+
+    openFirstDocument();
+
+    await waitFor(() => {
+      expect(getModal()).toBeInTheDocument();
+    });
+
+    fireEvent.click(getModal().querySelector("footer .modal-view-button"));
+
+    expect(openSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("heading", { name: "Acesso Restrito" })).toBeInTheDocument();
+
+    openSpy.mockRestore();
   });
 });

@@ -21,6 +21,7 @@ describe("fetchDocuments", () => {
         {
           id_documento: 42,
           nome: "Manual.pdf",
+          acesso_permitido: true,
         },
       ],
     };
@@ -77,6 +78,7 @@ describe("fetchDocumentById", () => {
       id_documento: 42,
       nome: "Manual.pdf",
       etiquetas: [{ id_etiqueta: 7, nome: "Importante" }],
+      acesso_permitido: true,
     };
 
     api.get.mockResolvedValue({ data: document });
@@ -102,5 +104,6 @@ describe("createDocument", () => {
     expect(result.nivel).toBe("Básico");
     expect(result.tipo_arquivo).toBe("pdf");
     expect(result.etiquetas).toEqual([{ id_etiqueta: 1, nome: "Técnico" }]);
+    expect(result.acesso_permitido).toBe(true);
   });
-});
+});
