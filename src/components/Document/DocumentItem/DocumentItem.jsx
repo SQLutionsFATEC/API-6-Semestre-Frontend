@@ -35,10 +35,12 @@ function DocumentItem({ document, onView, onOpenDetails }) {
 
   const handleActionClick = (e) => {
     e.stopPropagation();
+
     if (isRestricted && onOpenDetails) {
       onOpenDetails(document);
       return;
     }
+
     if (onView) {
       onView(document);
     }
@@ -46,8 +48,11 @@ function DocumentItem({ document, onView, onOpenDetails }) {
 
   return (
     <div
-      className={`document-item cursor-pointer ${isRestricted ? "document-restricted border-rose-100! hover:border-rose-300!" : ""
-        }`}
+      className={`document-item cursor-pointer ${
+        isRestricted
+          ? "document-restricted border-rose-100! hover:border-rose-300!"
+          : ""
+      }`}
       onClick={handleCardClick}
     >
       <div className="document-file">
@@ -70,11 +75,18 @@ function DocumentItem({ document, onView, onOpenDetails }) {
 
       <div className="document-access">
         <span
-          className={`access-badge access-${accessClass} ${isRestricted ? "access-restricted bg-rose-50! text-rose-700! border-rose-200!" : ""
-            }`}
+          className={`access-badge access-${accessClass} ${
+            isRestricted
+              ? "access-restricted bg-rose-50! text-rose-700! border-rose-200!"
+              : ""
+          }`}
         >
           {isRestricted && (
-            <FiLock className="access-lock-icon mr-1 text-rose-600 shrink-0" size={13} aria-hidden="true" />
+            <FiLock
+              className="access-lock-icon mr-1 text-rose-600 shrink-0"
+              size={13}
+              aria-hidden="true"
+            />
           )}
           {document.nivel}
         </span>
@@ -83,17 +95,26 @@ function DocumentItem({ document, onView, onOpenDetails }) {
       <div className="document-action">
         <button
           type="button"
-          className={`document-action-btn cursor-pointer ${isRestricted
+          className={`document-action-btn cursor-pointer ${
+            isRestricted
               ? "action-locked bg-rose-50! text-rose-700! border-rose-200! hover:bg-rose-100!"
               : ""
-            }`}
+          }`}
           onClick={handleActionClick}
           aria-label="Visualizar"
-          title={isRestricted ? "Acesso Restrito - Clique para mais informações" : "Visualizar documento"}
+          title={
+            isRestricted
+              ? "Acesso Restrito - Clique para mais informações"
+              : "Visualizar documento"
+          }
         >
           <span className="sr-only">Visualizar</span>
           {isRestricted ? (
-            <FiLock size={17} aria-hidden="true" data-testid="lock-icon" />
+            <FiLock
+              size={17}
+              aria-hidden="true"
+              data-testid="lock-icon"
+            />
           ) : (
             <FiEye size={17} aria-hidden="true" />
           )}

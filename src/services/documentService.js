@@ -6,6 +6,7 @@ function simularAcessoPermitido(doc, fallbackId) {
   }
 
   const id = doc?.id_documento ?? doc?.id ?? fallbackId;
+
   if (id !== undefined && id !== null) {
     return Number(id) % 2 !== 0;
   }
@@ -17,15 +18,30 @@ export async function fetchDocuments({
   nome = "",
   contexto = "",
   page = 1,
+  tags = [],
+  tipo = [],
+  data_atualizacao = "",
 } = {}) {
   const params = {
-    nome: nome,
+    nome,
     etiquetas: nome,
-    page: page,
+    page,
   };
 
   if (contexto !== "") {
     params.contexto = contexto;
+  }
+
+  if (tags.length > 0) {
+    params.tags = tags;
+  }
+
+  if (tipo.length > 0) {
+    params.tipo = tipo;
+  }
+
+  if (data_atualizacao !== "") {
+    params.data_atualizacao = data_atualizacao;
   }
 
   const response = await api.get("/api/documentos/", {
@@ -33,35 +49,52 @@ export async function fetchDocuments({
   });
 
   const data = response.data;
+
   if (!data?.results) return data;
 
-  // após implementação do back, o retorno será apenas o 'data'
   return {
     ...data,
     results: data.results.map((doc, index) => {
-      const id = doc.id_documento ?? doc.id ?? (index + 1);
+      const id = doc.id_documento ?? doc.id ?? index + 1;
+
       return {
         ...doc,
-        // Validação simples: usa apenas true ou false de acesso_permitido
         acesso_permitido: simularAcessoPermitido(doc, id),
       };
     }),
   };
 }
 
+export async function fetchTags(search = "") {
+  const trimmedSearch = search.trim();
+
+  if (trimmedSearch.length < 2) {
+    return [];
+  }
+
+  const response = await api.get("/api/etiquetas/", {
+    params: {
+      busca: trimmedSearch,
+    },
+  });
+
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  return response.data?.results || [];
+}
+
 export async function fetchDocumentById(idDocumento) {
   const response = await api.get(`/api/documentos/${idDocumento}/`);
   const doc = response.data;
 
-  // após implementação do back, o retorno será apenas o 'data'
   return {
     ...doc,
-    // Validação simples: usa apenas true ou false de acesso_permitido
     acesso_permitido: simularAcessoPermitido(doc, idDocumento),
   };
 }
 
-// posteriormente, basta alterar o mock abaixo por a função post de /api/documentos/
 export async function createDocument({
   nome = "",
   setor = "",
@@ -69,10 +102,12 @@ export async function createDocument({
   file = null,
 } = {}) {
   const formData = new FormData();
+
   formData.append("tipo_arquivo", "pdf");
   formData.append("nome", (nome || "").trim());
   formData.append("setor", (setor || "").trim());
   formData.append("nivel", (nivel || "").trim());
+
   if (file) {
     formData.append("data", file);
   }
@@ -86,7 +121,12 @@ export async function createDocument({
     setor: (setor || "").trim(),
     nivel: (nivel || "").trim(),
     data_atualizacao: new Date().toISOString(),
-    etiquetas: [{ id_etiqueta: 1, nome: (setor || "").trim() }],
+    etiquetas: [
+      {
+        id_etiqueta: 1,
+        nome: (setor || "").trim(),
+      },
+    ],
     acesso_permitido: true,
   };
 }
