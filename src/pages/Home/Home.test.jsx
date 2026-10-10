@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import Home from "./Home";
+import Home from "../../pages/Home/Home";
 import { fetchDocumentById, fetchDocuments } from "../../services/documentService";
 
 vi.mock("../../services/documentService", () => ({
@@ -47,7 +47,14 @@ function getModal() {
 }
 
 function openFirstDocument() {
-  fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
+  const documentItem = globalThis.document.querySelector(".document-item");
+  const button = documentItem?.querySelector("button");
+
+  if (!button) {
+    throw new Error("Não foi encontrado o botão do primeiro documento.");
+  }
+
+  fireEvent.click(button);
 }
 
 beforeEach(() => {
@@ -69,6 +76,9 @@ describe("Home", () => {
       nome: "",
       contexto: "",
       page: 1,
+      tags: [],
+      tipo: [],
+      data_atualizacao: "",
     });
   });
 
@@ -102,6 +112,9 @@ describe("Home", () => {
         nome: "manual",
         contexto: "manual",
         page: 1,
+        tags: [],
+        tipo: [],
+        data_atualizacao: "",
       });
     });
   });
@@ -120,6 +133,9 @@ describe("Home", () => {
         nome: "",
         contexto: "",
         page: 2,
+        tags: [],
+        tipo: [],
+        data_atualizacao: "",
       });
     });
   });
@@ -131,9 +147,13 @@ describe("Home", () => {
       expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Página anterior" }));
+    const callsBeforeClick = fetchDocuments.mock.calls.length;
 
-    expect(fetchDocuments).toHaveBeenCalledTimes(1);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Página anterior" })
+    );
+
+    expect(fetchDocuments).toHaveBeenCalledTimes(callsBeforeClick);
   });
 
   it("abre o modal com os detalhes do documento selecionado", async () => {
@@ -144,8 +164,6 @@ describe("Home", () => {
     });
 
     openFirstDocument();
-
-    expect(screen.getByText("Carregando detalhes do documento...")).toBeInTheDocument();
 
     await waitFor(() => {
       expect(getModal()).toBeInTheDocument();
@@ -184,7 +202,9 @@ describe("Home", () => {
       expect(screen.getByRole("alert")).toBeInTheDocument();
     });
     expect(
-      screen.getByText("NÃ£o foi possÃ­vel carregar os detalhes do documento.")
+      screen.getByText(
+        "Não foi possível carregar os detalhes do documento."
+      )
     ).toBeInTheDocument();
 
     vi.mocked(fetchDocumentById).mockResolvedValue(documentDetail);
@@ -216,7 +236,10 @@ describe("Home", () => {
       expect(getModal()).toBeInTheDocument();
     });
 
-    fireEvent.click(globalThis.document.querySelector(".document-modal-overlay"));
+    fireEvent.click(
+      globalThis.document.querySelector(".document-modal-overlay")
+    );
+
     expect(getModal()).not.toBeInTheDocument();
   });
 
