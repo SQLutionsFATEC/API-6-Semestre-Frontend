@@ -4,15 +4,30 @@ export async function fetchDocuments({
   nome = "",
   contexto = "",
   page = 1,
+  tags = [],
+  tipo = [],
+  data_atualizacao = "",
 } = {}) {
   const params = {
-    nome: nome,
+    nome,
     etiquetas: nome,
-    page: page,
+    page,
   };
 
   if (contexto !== "") {
     params.contexto = contexto;
+  }
+
+  if (tags.length > 0) {
+    params.tags = tags;
+  }
+
+  if (tipo.length > 0) {
+    params.tipo = tipo;
+  }
+
+  if (data_atualizacao !== "") {
+    params.data_atualizacao = data_atualizacao;
   }
 
   const response = await api.get("/api/documentos/", {
@@ -22,13 +37,33 @@ export async function fetchDocuments({
   return response.data;
 }
 
+export async function fetchTags(search = "") {
+  const trimmedSearch = search.trim();
+
+  if (trimmedSearch.length < 2) {
+    return [];
+  }
+
+  const response = await api.get("/api/etiquetas/", {
+    params: {
+      busca: trimmedSearch,
+    },
+  });
+
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  return response.data?.results || [];
+}
+
 export async function fetchDocumentById(idDocumento) {
   const response = await api.get(`/api/documentos/${idDocumento}/`);
 
   return response.data;
 }
 
-// posteriormente, basta alterar o mock abaixo por a função post de /api/documentos/
+// posteriormente, basta alterar o mock abaixo pela função POST de /api/documentos/
 export async function createDocument({
   nome = "",
   setor = "",
@@ -36,10 +71,12 @@ export async function createDocument({
   file = null,
 } = {}) {
   const formData = new FormData();
+
   formData.append("tipo_arquivo", "pdf");
   formData.append("nome", (nome || "").trim());
   formData.append("setor", (setor || "").trim());
   formData.append("nivel", (nivel || "").trim());
+
   if (file) {
     formData.append("data", file);
   }
@@ -53,7 +90,11 @@ export async function createDocument({
     setor: (setor || "").trim(),
     nivel: (nivel || "").trim(),
     data_atualizacao: new Date().toISOString(),
-    etiquetas: [{ id_etiqueta: 1, nome: (setor || "").trim() }],
+    etiquetas: [
+      {
+        id_etiqueta: 1,
+        nome: (setor || "").trim(),
+      },
+    ],
   };
 }
-
