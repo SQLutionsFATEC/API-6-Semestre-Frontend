@@ -50,7 +50,14 @@ function DocumentItem({ document, onView }) {
       </div>
 
       <div className="document-action">
-        <button onClick={() => onView(document)}>
+        <button
+          type="button"
+          aria-label="Visualizar"
+          onClick={(event) => {
+            event.stopPropagation();
+            onView(document);
+          }}
+        >
           <FiEye size={17} />
         </button>
       </div>
