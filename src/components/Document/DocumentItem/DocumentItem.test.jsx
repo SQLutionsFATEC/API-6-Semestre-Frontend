@@ -20,7 +20,9 @@ describe("DocumentItem", () => {
     expect(screen.getByText(documentData.setor)).toBeInTheDocument();
     expect(screen.getByText(documentData.nivel)).toBeInTheDocument();
     expect(screen.getByText(documentData.tipo_arquivo)).toBeInTheDocument();
-    expect(screen.getByText("Visualizar")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Visualizar" })
+    ).toBeInTheDocument();
   });
 
   it("formata a data de atualizacao no padrao pt-BR", () => {
