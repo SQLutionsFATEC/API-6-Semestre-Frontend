@@ -27,6 +27,7 @@ describe("fetchDocuments", () => {
         {
           id_documento: 42,
           nome: "Manual.pdf",
+          acesso_permitido: true,
         },
       ],
     };
@@ -198,6 +199,25 @@ describe("fetchDocuments", () => {
       },
     });
   });
+
+  it("preserva o acesso permitido retornado pela API", async () => {
+    const responseData = {
+      pages: 1,
+      results: [
+        {
+          id_documento: 2,
+          nome: "Documento restrito.pdf",
+          acesso_permitido: false,
+        },
+      ],
+    };
+
+    api.get.mockResolvedValue({
+      data: responseData,
+    });
+
+    await expect(fetchDocuments()).resolves.toEqual(responseData);
+  });
 });
 
 describe("fetchTags", () => {
@@ -328,6 +348,7 @@ describe("fetchDocumentById", () => {
           nome: "Importante",
         },
       ],
+      acesso_permitido: true,
     };
 
     api.get.mockResolvedValue({
@@ -337,6 +358,22 @@ describe("fetchDocumentById", () => {
     await expect(fetchDocumentById(42)).resolves.toEqual(document);
 
     expect(api.get).toHaveBeenCalledWith("/api/documentos/42/");
+  });
+
+  it("calcula o acesso quando a API não retorna acesso_permitido", async () => {
+    const document = {
+      id_documento: 42,
+      nome: "Manual.pdf",
+    };
+
+    api.get.mockResolvedValue({
+      data: document,
+    });
+
+    await expect(fetchDocumentById(42)).resolves.toEqual({
+      ...document,
+      acesso_permitido: false,
+    });
   });
 });
 
@@ -369,5 +406,7 @@ describe("createDocument", () => {
         nome: "Técnico",
       },
     ]);
+
+    expect(result.acesso_permitido).toBe(true);
   });
 });

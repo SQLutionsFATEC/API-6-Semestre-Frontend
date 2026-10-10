@@ -86,4 +86,75 @@ describe("DocumentItem", () => {
 
     expect(onView).toHaveBeenCalledWith(documentData);
   });
+
+  it("chama onOpenDetails ao clicar em qualquer lugar do cartão", () => {
+    const onOpenDetails = vi.fn();
+    const onView = vi.fn();
+    render(
+      <DocumentItem
+        document={documentData}
+        onView={onView}
+        onOpenDetails={onOpenDetails}
+      />
+    );
+
+    fireEvent.click(screen.getByText(documentData.nome));
+
+    expect(onOpenDetails).toHaveBeenCalledWith(documentData);
+    expect(onView).not.toHaveBeenCalled();
+  });
+
+  it("chama onView e impede propagação ao clicar no botão de visualizar", () => {
+    const onOpenDetails = vi.fn();
+    const onView = vi.fn();
+    render(
+      <DocumentItem
+        document={documentData}
+        onView={onView}
+        onOpenDetails={onOpenDetails}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
+
+    expect(onView).toHaveBeenCalledWith(documentData);
+    expect(onOpenDetails).not.toHaveBeenCalled();
+  });
+
+  it("exibe inequivocamente o ícone de cadeado para documentos restritos", () => {
+    const restrictedDoc = {
+      ...documentData,
+      nivel: "Militar",
+      acesso_permitido: false,
+    };
+
+    const { container } = render(
+      <DocumentItem document={restrictedDoc} onView={vi.fn()} />
+    );
+
+    expect(screen.getByTestId("lock-icon")).toBeInTheDocument();
+    expect(container.querySelector(".access-restricted")).toBeInTheDocument();
+    expect(container.querySelector(".access-lock-icon")).toBeInTheDocument();
+  });
+
+  it("chama onOpenDetails ao clicar no botão de cadeado de um documento restrito", () => {
+    const onOpenDetails = vi.fn();
+    const onView = vi.fn();
+    const restrictedDoc = {
+      ...documentData,
+      acesso_permitido: false,
+    };
+    render(
+      <DocumentItem
+        document={restrictedDoc}
+        onView={onView}
+        onOpenDetails={onOpenDetails}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
+
+    expect(onOpenDetails).toHaveBeenCalledWith(restrictedDoc);
+    expect(onView).not.toHaveBeenCalled();
+  });
 });

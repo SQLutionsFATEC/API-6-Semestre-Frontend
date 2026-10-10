@@ -6,6 +6,7 @@ import FilterSidebar from "../../components/FilterSidebar/FilterSidebar";
 import DocumentList from "../../components/Document/DocumentList/DocumentList";
 import Pagination from "../../components/Pagination/Pagination";
 import DocumentModal from "../../components/Document/DocumentModal/DocumentModal";
+import RestrictedModal from "../../components/Document/RestrictedModal/RestrictedModal";
 
 import {
   fetchDocumentById,
@@ -34,6 +35,7 @@ function Home() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [documentDetailsLoading, setDocumentDetailsLoading] = useState(false);
   const [documentDetailsError, setDocumentDetailsError] = useState(null);
+  const [restrictedModalOpen, setRestrictedModalOpen] = useState(false);
   const detailRequestId = useRef(0);
 
   const handleCloseFilters = useCallback(() => {
@@ -42,6 +44,7 @@ function Home() {
 
   useEffect(() => {
     let cancelled = false;
+
     const timer = setTimeout(async () => {
       setLoading(true);
       setError(null);
@@ -115,15 +118,22 @@ function Home() {
     setCurrentPage(1);
     setIsFilterSidebarOpen(false);
   }
+
   function handleViewPdf(document) {
+    if (document.acesso_permitido === false) {
+      setRestrictedModalOpen(true);
+      return;
+    }
+
     if (document.data) {
       window.open(document.data, "_blank");
       return;
     }
+
     console.log("PDF ainda não disponível:", document.nome);
   }
 
-  async function loadDocumentDetails(idDocumento) {
+  async function loadDocumentDetails(idDocumento, initialDocument) {
     const requestId = ++detailRequestId.current;
 
     setDocumentDetailsLoading(true);
@@ -133,7 +143,14 @@ function Home() {
       const document = await fetchDocumentById(idDocumento);
 
       if (requestId === detailRequestId.current) {
-        setSelectedDocument(document);
+        setSelectedDocument({
+          ...initialDocument,
+          ...document,
+          acesso_permitido:
+            typeof document.acesso_permitido === "boolean"
+              ? document.acesso_permitido
+              : initialDocument?.acesso_permitido,
+        });
       }
     } catch (err) {
       if (requestId === detailRequestId.current) {
@@ -151,7 +168,7 @@ function Home() {
 
   function handleOpenDocument(document) {
     setSelectedDocument(document);
-    loadDocumentDetails(document.id_documento);
+    loadDocumentDetails(document.id_documento, document);
   }
 
   function handleCloseDocumentModal() {
@@ -163,7 +180,10 @@ function Home() {
 
   function handleRetryDocumentDetails() {
     if (selectedDocument?.id_documento) {
-      loadDocumentDetails(selectedDocument.id_documento);
+      loadDocumentDetails(
+        selectedDocument.id_documento,
+        selectedDocument
+      );
     }
   }
 
@@ -210,7 +230,8 @@ function Home() {
           <>
             <DocumentList
               documents={documents}
-              onView={handleOpenDocument}
+              onView={handleViewPdf}
+              onOpenDetails={handleOpenDocument}
             />
             <Pagination
               currentPage={currentPage}
@@ -227,6 +248,7 @@ function Home() {
         onClose={handleCloseFilters}
         onApplyFilters={handleApplyFilters}
       />
+
       <DocumentModal
         document={selectedDocument}
         loading={documentDetailsLoading}
@@ -234,6 +256,11 @@ function Home() {
         onClose={handleCloseDocumentModal}
         onRetry={handleRetryDocumentDetails}
         onViewPdf={handleViewPdf}
+      />
+
+      <RestrictedModal
+        isOpen={restrictedModalOpen}
+        onClose={() => setRestrictedModalOpen(false)}
       />
     </div>
   );

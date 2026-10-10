@@ -1,5 +1,19 @@
 import api from "./api";
 
+function simularAcessoPermitido(doc, fallbackId) {
+  if (typeof doc?.acesso_permitido === "boolean") {
+    return doc.acesso_permitido;
+  }
+
+  const id = doc?.id_documento ?? doc?.id ?? fallbackId;
+
+  if (id !== undefined && id !== null) {
+    return Number(id) % 2 !== 0;
+  }
+
+  return true;
+}
+
 export async function fetchDocuments({
   nome = "",
   contexto = "",
@@ -34,7 +48,21 @@ export async function fetchDocuments({
     params,
   });
 
-  return response.data;
+  const data = response.data;
+
+  if (!data?.results) return data;
+
+  return {
+    ...data,
+    results: data.results.map((doc, index) => {
+      const id = doc.id_documento ?? doc.id ?? index + 1;
+
+      return {
+        ...doc,
+        acesso_permitido: simularAcessoPermitido(doc, id),
+      };
+    }),
+  };
 }
 
 export async function fetchTags(search = "") {
@@ -59,11 +87,14 @@ export async function fetchTags(search = "") {
 
 export async function fetchDocumentById(idDocumento) {
   const response = await api.get(`/api/documentos/${idDocumento}/`);
+  const doc = response.data;
 
-  return response.data;
+  return {
+    ...doc,
+    acesso_permitido: simularAcessoPermitido(doc, idDocumento),
+  };
 }
 
-// posteriormente, basta alterar o mock abaixo pela função POST de /api/documentos/
 export async function createDocument({
   nome = "",
   setor = "",
@@ -96,5 +127,6 @@ export async function createDocument({
         nome: (setor || "").trim(),
       },
     ],
+    acesso_permitido: true,
   };
 }
