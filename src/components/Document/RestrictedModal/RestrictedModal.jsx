@@ -5,6 +5,10 @@ function RestrictedModal({ isOpen, onClose }) {
   useEffect(() => {
     if (!isOpen) return;
 
+    function handleKeyDown(event) {
+      if (event.key === "Escape") onClose();
+    }
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
