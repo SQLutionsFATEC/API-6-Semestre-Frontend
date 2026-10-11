@@ -7,6 +7,7 @@ import DocumentList from "../../components/Document/DocumentList/DocumentList";
 import Pagination from "../../components/Pagination/Pagination";
 import DocumentModal from "../../components/Document/DocumentModal/DocumentModal";
 import RestrictedModal from "../../components/Document/RestrictedModal/RestrictedModal";
+import PdfViewer from "../../components/Document/PdfViewer/PdfViewer";
 
 import {
   fetchDocumentById,
@@ -33,6 +34,7 @@ function Home() {
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
 
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [viewerDocument, setViewerDocument] = useState(null);
   const [documentDetailsLoading, setDocumentDetailsLoading] = useState(false);
   const [documentDetailsError, setDocumentDetailsError] = useState(null);
   const [restrictedModalOpen, setRestrictedModalOpen] = useState(false);
@@ -40,6 +42,9 @@ function Home() {
 
   const handleCloseFilters = useCallback(() => {
     setIsFilterSidebarOpen(false);
+  }, []);
+  const handleClosePdfViewer = useCallback(() => {
+    setViewerDocument(null);
   }, []);
 
   useEffect(() => {
@@ -126,7 +131,7 @@ function Home() {
     }
 
     if (document.data) {
-      window.open(document.data, "_blank");
+      setViewerDocument(document);
       return;
     }
 
@@ -261,6 +266,12 @@ function Home() {
       <RestrictedModal
         isOpen={restrictedModalOpen}
         onClose={() => setRestrictedModalOpen(false)}
+      />
+
+      <PdfViewer
+        key={viewerDocument?.data || "closed"}
+        document={viewerDocument}
+        onClose={handleClosePdfViewer}
       />
     </div>
   );
