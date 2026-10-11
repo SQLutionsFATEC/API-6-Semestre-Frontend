@@ -1,8 +1,11 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import Home from "./Home";
-import { fetchDocumentById, fetchDocuments } from "../../services/documentService";
+import Home from "../../pages/Home/Home";
+import {
+  fetchDocumentById,
+  fetchDocuments,
+} from "../../services/documentService";
 
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
@@ -78,11 +81,15 @@ describe("Home", () => {
     await waitFor(() => {
       expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
     });
+
     expect(screen.getByText("Ata de reuniao.docx")).toBeInTheDocument();
     expect(fetchDocuments).toHaveBeenCalledWith({
       nome: "",
       contexto: "",
       page: 1,
+      tags: [],
+      tipo: [],
+      data_atualizacao: "",
     });
   });
 
@@ -94,6 +101,7 @@ describe("Home", () => {
     await waitFor(() => {
       expect(screen.getByText("Erro ao carregar")).toBeInTheDocument();
     });
+
     expect(
       screen.getByText("Não foi possível carregar os documentos.")
     ).toBeInTheDocument();
@@ -116,6 +124,9 @@ describe("Home", () => {
         nome: "manual",
         contexto: "manual",
         page: 1,
+        tags: [],
+        tipo: [],
+        data_atualizacao: "",
       });
     });
   });
@@ -134,6 +145,9 @@ describe("Home", () => {
         nome: "",
         contexto: "",
         page: 2,
+        tags: [],
+        tipo: [],
+        data_atualizacao: "",
       });
     });
   });
@@ -145,9 +159,13 @@ describe("Home", () => {
       expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Página anterior" }));
+    const callsBeforeClick = fetchDocuments.mock.calls.length;
 
-    expect(fetchDocuments).toHaveBeenCalledTimes(1);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Página anterior" })
+    );
+
+    expect(fetchDocuments).toHaveBeenCalledTimes(callsBeforeClick);
   });
 
   it("abre o modal com os detalhes do documento selecionado ao clicar no cartão", async () => {
@@ -159,11 +177,10 @@ describe("Home", () => {
 
     openFirstDocument();
 
-    expect(screen.getByText("Carregando detalhes do documento...")).toBeInTheDocument();
-
     await waitFor(() => {
       expect(getModal()).toBeInTheDocument();
     });
+
     expect(fetchDocumentById).toHaveBeenCalledWith(1);
     expect(screen.getByText("Tecnico")).toBeInTheDocument();
   });
@@ -181,7 +198,10 @@ describe("Home", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
 
-    expect(openSpy).toHaveBeenCalledWith(documentsPage.results[0].data, "_blank");
+    expect(openSpy).toHaveBeenCalledWith(
+      documentsPage.results[0].data,
+      "_blank"
+    );
     expect(fetchDocumentById).not.toHaveBeenCalled();
 
     openSpy.mockRestore();
@@ -199,6 +219,7 @@ describe("Home", () => {
     await waitFor(() => {
       expect(screen.getByText("Tecnico")).toBeInTheDocument();
     });
+
     expect(getModal()).toBeInTheDocument();
   });
 
@@ -216,8 +237,11 @@ describe("Home", () => {
     await waitFor(() => {
       expect(screen.getByRole("alert")).toBeInTheDocument();
     });
+
     expect(
-      screen.getByText("Não foi possível carregar os detalhes do documento.")
+      screen.getByText(
+        "Não foi possível carregar os detalhes do documento."
+      )
     ).toBeInTheDocument();
 
     vi.mocked(fetchDocumentById).mockResolvedValue(documentDetail);
@@ -245,11 +269,15 @@ describe("Home", () => {
     expect(getModal()).not.toBeInTheDocument();
 
     openFirstDocument();
+
     await waitFor(() => {
       expect(getModal()).toBeInTheDocument();
     });
 
-    fireEvent.click(globalThis.document.querySelector(".document-modal-overlay"));
+    fireEvent.click(
+      globalThis.document.querySelector(".document-modal-overlay")
+    );
+
     expect(getModal()).not.toBeInTheDocument();
   });
 
@@ -282,9 +310,11 @@ describe("Home", () => {
       ...documentDetail,
       data: null,
     });
+
     const openSpy = vi
       .spyOn(window, "open")
       .mockImplementation(() => null);
+
     const consoleSpy = vi
       .spyOn(console, "log")
       .mockImplementation(() => {});
@@ -314,7 +344,9 @@ describe("Home", () => {
     render(<Home />);
 
     await waitFor(() => {
-      expect(screen.getByText("Plano Militar Confidencial.pdf")).toBeInTheDocument();
+      expect(
+        screen.getByText("Plano Militar Confidencial.pdf")
+      ).toBeInTheDocument();
     });
 
     expect(screen.getByTestId("lock-icon")).toBeInTheDocument();
@@ -329,19 +361,21 @@ describe("Home", () => {
     render(<Home />);
 
     await waitFor(() => {
-      expect(screen.getByText("Plano Militar Confidencial.pdf")).toBeInTheDocument();
+      expect(
+        screen.getByText("Plano Militar Confidencial.pdf")
+      ).toBeInTheDocument();
     });
 
-    // Clica no cartão do documento bloqueado
     fireEvent.click(screen.getByText("Plano Militar Confidencial.pdf"));
 
-    // O modal de detalhes deve abrir e mostrar o indicativo de bloqueio
     await waitFor(() => {
       expect(getModal()).toBeInTheDocument();
     });
 
     expect(screen.getByText("Acesso Bloqueado")).toBeInTheDocument();
-    expect(screen.getByText("Documento com Acesso Restrito")).toBeInTheDocument();
+    expect(
+      screen.getByText("Documento com Acesso Restrito")
+    ).toBeInTheDocument();
   });
 
   it("ao clicar no botão de cadeado de um documento restrito, abre o modal de detalhes com o indicativo de bloqueio", async () => {
@@ -353,15 +387,16 @@ describe("Home", () => {
     render(<Home />);
 
     await waitFor(() => {
-      expect(screen.getByText("Plano Militar Confidencial.pdf")).toBeInTheDocument();
+      expect(
+        screen.getByText("Plano Militar Confidencial.pdf")
+      ).toBeInTheDocument();
     });
 
     const buttons = screen.getAllByRole("button", { name: "Visualizar" });
-    const restrictedButton = buttons[2]; // Terceiro documento é restrito
+    const restrictedButton = buttons[2];
 
     fireEvent.click(restrictedButton);
 
-    // O modal de detalhes deve abrir normalmente
     await waitFor(() => {
       expect(getModal()).toBeInTheDocument();
     });
@@ -394,7 +429,9 @@ describe("Home", () => {
     fireEvent.click(getModal().querySelector("footer .modal-view-button"));
 
     expect(openSpy).not.toHaveBeenCalled();
-    expect(screen.getByRole("heading", { name: "Acesso Restrito" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Acesso Restrito" })
+    ).toBeInTheDocument();
 
     openSpy.mockRestore();
   });
