@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import Home from "../../pages/Home/Home";
 import {
@@ -10,6 +10,42 @@ import {
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
   fetchDocumentById: vi.fn(),
+}));
+
+vi.mock("pdfjs-dist", () => ({
+  GlobalWorkerOptions: { workerSrc: "" },
+  getDocument: vi.fn(() => ({
+    promise: Promise.resolve({
+      numPages: 1,
+      getPage: vi.fn().mockResolvedValue({
+        getViewport: vi.fn(({ scale }) => ({
+          width: 600 * scale,
+          height: 800 * scale,
+        })),
+        render: vi.fn(() => ({
+          promise: Promise.resolve(),
+          cancel: vi.fn(),
+        })),
+      }),
+    }),
+    destroy: vi.fn(),
+  })),
+}));
+
+vi.mock("docx-preview", () => ({
+  renderAsync: vi.fn(async (_document, contentContainer) => {
+    const paragraph = globalThis.document.createElement("p");
+    paragraph.textContent = "Conteúdo renderizado do DOCX";
+    contentContainer.append(paragraph);
+  }),
+}));
+
+vi.mock("@mdgate/doc", () => ({
+  toMarkdown: vi.fn().mockResolvedValue("# Documento DOC\n\nTexto do documento legado."),
+}));
+
+vi.mock("react-markdown", () => ({
+  default: ({ children }) => children,
 }));
 
 const documentsPage = {
@@ -69,9 +105,15 @@ function openFirstDocument() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({});
 
   vi.mocked(fetchDocuments).mockResolvedValue(documentsPage);
   vi.mocked(fetchDocumentById).mockResolvedValue(documentDetail);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("Home", () => {
@@ -185,11 +227,7 @@ describe("Home", () => {
     expect(screen.getByText("Tecnico")).toBeInTheDocument();
   });
 
-  it("abre o PDF diretamente ao clicar no botão de visualizar do cartão", async () => {
-    const openSpy = vi
-      .spyOn(window, "open")
-      .mockImplementation(() => null);
-
+  it("abre o PDF no visualizador ao clicar no botão do cartão", async () => {
     render(<Home />);
 
     await waitFor(() => {
@@ -198,13 +236,131 @@ describe("Home", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
 
-    expect(openSpy).toHaveBeenCalledWith(
-      documentsPage.results[0].data,
-      "_blank"
-    );
+    expect(screen.getByRole("dialog", { name: /Manual do sistema.pdf/ })).toBeInTheDocument();
+    expect(await screen.findByLabelText("Página 1")).toBeInTheDocument();
     expect(fetchDocumentById).not.toHaveBeenCalled();
+  });
 
-    openSpy.mockRestore();
+  it("limita o zoom do visualizador entre 50% e 400% e permite fechá-lo", async () => {
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
+
+    const zoomIn = screen.getByRole("button", { name: "Aumentar zoom" });
+    for (let index = 0; index < 20; index += 1) fireEvent.click(zoomIn);
+
+    expect(screen.getByText("400%")).toBeInTheDocument();
+    expect(zoomIn).toBeDisabled();
+
+    const zoomOut = screen.getByRole("button", { name: "Diminuir zoom" });
+    for (let index = 0; index < 20; index += 1) fireEvent.click(zoomOut);
+
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(zoomOut).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText("Fechar visualização"));
+    expect(
+      screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it("fecha ao clicar fora e bloqueia o menu de contexto no documento", async () => {
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
+    await screen.findByLabelText("Página 1");
+
+    const viewerContent = screen.getByLabelText("Página 1").parentElement.parentElement;
+    const contextMenuEvent = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+    });
+    fireEvent(viewerContent, contextMenuEvent);
+    expect(contextMenuEvent.defaultPrevented).toBe(true);
+
+    fireEvent.click(globalThis.document.querySelector(".pdf-viewer-overlay"));
+    expect(
+      screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it("renderiza DOCX localmente dentro do visualizador", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
+      })
+    );
+    vi.mocked(fetchDocuments).mockResolvedValue({
+      ...documentsPage,
+      results: [
+        {
+          ...documentsPage.results[0],
+          nome: "Manual Word.docx",
+          tipo_arquivo: "docx",
+          data: "http://localhost:8000/media/documentos/manual.docx",
+        },
+      ],
+    });
+
+    render(<Home />);
+    await waitFor(() => {
+      expect(screen.getByText("Manual Word.docx")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
+
+    expect(
+      await screen.findByText("Conteúdo renderizado do DOCX")
+    ).toBeInTheDocument();
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/media/documentos/manual.docx",
+      expect.objectContaining({ credentials: "include" })
+    );
+  });
+
+  it("exibe DOC legado localmente sem gerar PDF", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
+      })
+    );
+    vi.mocked(fetchDocuments).mockResolvedValue({
+      ...documentsPage,
+      results: [
+        {
+          ...documentsPage.results[0],
+          nome: "Manual legado.doc",
+          tipo_arquivo: "doc",
+          data: "http://localhost:8000/media/documentos/manual.doc",
+        },
+      ],
+    });
+
+    render(<Home />);
+    await waitFor(() => {
+      expect(screen.getByText("Manual legado.doc")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
+
+    const legacyContent = await screen.findByText((_, element) =>
+      element.classList.contains("word-markdown-content")
+    );
+    expect(legacyContent).toHaveTextContent("Documento DOC");
+    expect(legacyContent).toHaveTextContent("Texto do documento legado.");
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "http://localhost:8000/media/documentos/manual.doc",
+      expect.objectContaining({ credentials: "include" })
+    );
   });
 
   it("abre o modal direto quando ja existe documento selecionado", async () => {
@@ -281,11 +437,7 @@ describe("Home", () => {
     expect(getModal()).not.toBeInTheDocument();
   });
 
-  it("abre o PDF em nova aba ao visualizar pelo modal", async () => {
-    const openSpy = vi
-      .spyOn(window, "open")
-      .mockImplementation(() => null);
-
+  it("abre o PDF no visualizador ao visualizar pelos detalhes", async () => {
     render(<Home />);
 
     await waitFor(() => {
@@ -300,24 +452,14 @@ describe("Home", () => {
 
     fireEvent.click(getModal().querySelector("footer .modal-view-button"));
 
-    expect(openSpy).toHaveBeenCalledWith(documentDetail.data, "_blank");
-
-    openSpy.mockRestore();
+    expect(screen.getByRole("dialog", { name: /Manual do sistema.pdf/ })).toBeInTheDocument();
   });
 
-  it("nao abre o PDF quando o documento nao tem URL de arquivo", async () => {
+  it("nao abre o visualizador quando o documento nao tem URL de arquivo", async () => {
     vi.mocked(fetchDocumentById).mockResolvedValue({
       ...documentDetail,
       data: null,
     });
-
-    const openSpy = vi
-      .spyOn(window, "open")
-      .mockImplementation(() => null);
-
-    const consoleSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => {});
 
     render(<Home />);
 
@@ -334,10 +476,7 @@ describe("Home", () => {
     const viewButton = getModal().querySelector("footer .modal-view-button");
 
     expect(viewButton).toBeDisabled();
-    expect(openSpy).not.toHaveBeenCalled();
-
-    openSpy.mockRestore();
-    consoleSpy.mockRestore();
+    expect(screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })).not.toBeInTheDocument();
   });
 
   it("documentos restritos exibem inequivocamente o ícone de cadeado", async () => {
@@ -410,10 +549,6 @@ describe("Home", () => {
       acesso_permitido: false,
     });
 
-    const openSpy = vi
-      .spyOn(window, "open")
-      .mockImplementation(() => null);
-
     render(<Home />);
 
     await waitFor(() => {
@@ -428,11 +563,9 @@ describe("Home", () => {
 
     fireEvent.click(getModal().querySelector("footer .modal-view-button"));
 
-    expect(openSpy).not.toHaveBeenCalled();
     expect(
       screen.getByRole("heading", { name: "Acesso Restrito" })
     ).toBeInTheDocument();
-
-    openSpy.mockRestore();
+    expect(screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })).not.toBeInTheDocument();
   });
 });

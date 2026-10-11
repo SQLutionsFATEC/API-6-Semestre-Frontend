@@ -30,13 +30,13 @@ vi.mock("../../components/SearchBar/SearchBar", () => ({
 }));
 
 vi.mock("../../components/Document/DocumentList/DocumentList", () => ({
-  default: ({ documents = [], onView }) => (
+  default: ({ documents = [], onOpenDetails }) => (
     <div data-testid="document-list">
       {documents.map((document) => (
         <button
           key={document.id_documento}
           type="button"
-          onClick={() => onView(document)}
+          onClick={() => onOpenDetails(document)}
         >
           {document.nome}
         </button>
