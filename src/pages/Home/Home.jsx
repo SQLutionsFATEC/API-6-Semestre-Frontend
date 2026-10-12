@@ -2,13 +2,17 @@ import { FiFileText, FiFilter, FiAlertCircle, FiUser } from "react-icons/fi";
 import { useEffect, useRef, useState } from "react";
 
 import SearchBar from "../../components/SearchBar/SearchBar";
+import FilterSidebar from "../../components/FilterSidebar/FilterSidebar";
 import DocumentList from "../../components/Document/DocumentList/DocumentList";
 import Pagination from "../../components/Pagination/Pagination";
 import DocumentModal from "../../components/Document/DocumentModal/DocumentModal";
 import RestrictedModal from "../../components/Document/RestrictedModal/RestrictedModal";
 import UserModal from "../../components/UserModal/UserModal";
 
-import { fetchDocumentById, fetchDocuments } from "../../services/documentService";
+import {
+  fetchDocumentById,
+  fetchDocuments,
+} from "../../services/documentService";
 
 import "./Home.css";
 
@@ -26,6 +30,10 @@ function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
+
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [documentDetailsLoading, setDocumentDetailsLoading] = useState(false);
   const [documentDetailsError, setDocumentDetailsError] = useState(null);
@@ -34,7 +42,13 @@ function Home() {
   const [currentUser, setCurrentUser] = useState(MOCK_CURRENT_USER);
   const detailRequestId = useRef(0);
 
+  const handleCloseFilters = useCallback(() => {
+    setIsFilterSidebarOpen(false);
+  }, []);
+
   useEffect(() => {
+    let cancelled = false;
+
     const timer = setTimeout(async () => {
       setLoading(true);
       setError(null);
@@ -44,23 +58,40 @@ function Home() {
           nome: search,
           contexto: search,
           page: currentPage,
+          tags: filters.tags,
+          tipo: filters.tipo,
+          data_atualizacao: filters.data_atualizacao,
         });
-        console.log(data);
+
+        if (cancelled) return;
 
         setDocuments(data.results || []);
         setTotalPages(data.pages || 1);
       } catch (err) {
+        if (cancelled) return;
+
         console.error("Erro ao buscar documentos:", err);
         setError("Não foi possível carregar os documentos.");
         setDocuments([]);
         setTotalPages(1);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }, 400);
 
-    return () => clearTimeout(timer);
-  }, [search, currentPage]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [
+    search,
+    currentPage,
+    filters.tags,
+    filters.tipo,
+    filters.data_atualizacao,
+  ]);
 
   function handleSearch(value) {
     setSearch(value);
@@ -72,15 +103,37 @@ function Home() {
     setCurrentPage(page);
   }
 
+  function handleApplyFilters(nextFilters) {
+    setFilters({
+      tags: [...(nextFilters.tags || [])],
+      tipo: [...(nextFilters.tipo || [])],
+      data_atualizacao: nextFilters.data_atualizacao || "",
+    });
+    setCurrentPage(1);
+    setIsFilterSidebarOpen(false);
+  }
+
+  function handleClearFilters() {
+    setFilters({
+      tags: [],
+      tipo: [],
+      data_atualizacao: "",
+    });
+    setCurrentPage(1);
+    setIsFilterSidebarOpen(false);
+  }
+
   function handleViewPdf(document) {
     if (document.acesso_permitido === false) {
       setRestrictedModalOpen(true);
       return;
     }
+
     if (document.data) {
       window.open(document.data, "_blank");
       return;
     }
+
     console.log("PDF ainda não disponível:", document.nome);
   }
 
@@ -106,7 +159,9 @@ function Home() {
     } catch (err) {
       if (requestId === detailRequestId.current) {
         console.error("Erro ao buscar detalhes do documento:", err);
-        setDocumentDetailsError("Não foi possível carregar os detalhes do documento.");
+        setDocumentDetailsError(
+          "Não foi possível carregar os detalhes do documento."
+        );
       }
     } finally {
       if (requestId === detailRequestId.current) {
@@ -129,7 +184,10 @@ function Home() {
 
   function handleRetryDocumentDetails() {
     if (selectedDocument?.id_documento) {
-      loadDocumentDetails(selectedDocument.id_documento, selectedDocument);
+      loadDocumentDetails(
+        selectedDocument.id_documento,
+        selectedDocument
+      );
     }
   }
 
@@ -152,8 +210,15 @@ function Home() {
 
         <div className="header-actions">
           <SearchBar value={search} onChange={handleSearch} />
-          <button className="filter-button">
-            <FiFilter size={15} />
+
+          <button
+            type="button"
+            className="filter-button"
+            aria-haspopup="dialog"
+            aria-expanded={isFilterSidebarOpen}
+            onClick={() => setIsFilterSidebarOpen(true)}
+          >
+            <FiFilter size={15} aria-hidden="true" />
             Filtros
           </button>
 
@@ -200,6 +265,13 @@ function Home() {
         )}
       </section>
 
+      <FilterSidebar
+        isOpen={isFilterSidebarOpen}
+        filters={filters}
+        onClose={handleCloseFilters}
+        onApplyFilters={handleApplyFilters}
+      />
+
       <DocumentModal
         document={selectedDocument}
         loading={documentDetailsLoading}
@@ -211,7 +283,6 @@ function Home() {
 
       <RestrictedModal
         isOpen={restrictedModalOpen}
-        // para simular o bloqueio, basta mudar o valor de 'isOpen' para true
         onClose={() => setRestrictedModalOpen(false)}
       />
 
