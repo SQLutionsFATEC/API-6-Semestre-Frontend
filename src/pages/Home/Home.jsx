@@ -1,5 +1,5 @@
-import { FiAlertCircle, FiFileText, FiFilter } from "react-icons/fi";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { FiFileText, FiFilter, FiAlertCircle, FiUser } from "react-icons/fi";
+import { useEffect, useRef, useState } from "react";
 
 import SearchBar from "../../components/SearchBar/SearchBar";
 import FilterSidebar from "../../components/FilterSidebar/FilterSidebar";
@@ -7,6 +7,7 @@ import DocumentList from "../../components/Document/DocumentList/DocumentList";
 import Pagination from "../../components/Pagination/Pagination";
 import DocumentModal from "../../components/Document/DocumentModal/DocumentModal";
 import RestrictedModal from "../../components/Document/RestrictedModal/RestrictedModal";
+import UserModal from "../../components/UserModal/UserModal";
 
 import {
   fetchDocumentById,
@@ -15,10 +16,11 @@ import {
 
 import "./Home.css";
 
-const EMPTY_FILTERS = {
-  tags: [],
-  tipo: [],
-  data_atualizacao: "",
+const MOCK_CURRENT_USER = {
+  name: "Chico Soluções",
+  email: "ChicoLutions@gmail.com",
+  role: "Técnico",
+  level: "Nível 1",
 };
 
 function Home() {
@@ -36,6 +38,8 @@ function Home() {
   const [documentDetailsLoading, setDocumentDetailsLoading] = useState(false);
   const [documentDetailsError, setDocumentDetailsError] = useState(null);
   const [restrictedModalOpen, setRestrictedModalOpen] = useState(false);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(MOCK_CURRENT_USER);
   const detailRequestId = useRef(0);
 
   const handleCloseFilters = useCallback(() => {
@@ -187,6 +191,15 @@ function Home() {
     }
   }
 
+  function handleUserUpdated(updatedUser) {
+    setCurrentUser((prev) => ({ ...prev, ...updatedUser }));
+  }
+
+  function handleUserDeleted() {
+    console.log("Conta excluída (simulação).");
+    setCurrentUser(MOCK_CURRENT_USER);
+  }
+
   return (
     <div className="home">
       <header className="page-header">
@@ -207,6 +220,16 @@ function Home() {
           >
             <FiFilter size={15} aria-hidden="true" />
             Filtros
+          </button>
+
+          <button
+            type="button"
+            className="user-trigger"
+            onClick={() => setIsUserModalOpen(true)}
+            aria-label="Abrir perfil do usuário"
+          >
+            <FiUser size={18} />
+            <span>{currentUser.name}</span>
           </button>
         </div>
       </header>
@@ -261,6 +284,14 @@ function Home() {
       <RestrictedModal
         isOpen={restrictedModalOpen}
         onClose={() => setRestrictedModalOpen(false)}
+      />
+
+      <UserModal
+        isOpen={isUserModalOpen}
+        onClose={() => setIsUserModalOpen(false)}
+        user={currentUser}
+        onUserUpdated={handleUserUpdated}
+        onUserDeleted={handleUserDeleted}
       />
     </div>
   );
