@@ -12,6 +12,7 @@ import {
 vi.mock("./api", () => ({
   default: {
     get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
@@ -378,14 +379,18 @@ describe("fetchDocumentById", () => {
 });
 
 describe("createDocument", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("mocka a criação do documento e retorna os dados formatados", async () => {
-    const file = new File(["teste"], "doc.pdf", {
-      type: "application/pdf",
-    });
+  it("envia multipart/form-data para /api/documentos/ com os campos corretos", async () => {
+    const file = new File(["teste"], "doc.pdf", { type: "application/pdf" });
+    const payload = {
+      id_documento: 101,
+      tipo_arquivo: "pdf",
+      nome: "doc.pdf",
+      setor: "Técnico",
+      nivel: "Básico",
+      data_atualizacao: "2026-01-01T00:00:00Z",
+      etiquetas: [{ id_etiqueta: 1, nome: "Técnico" }],
+    };
+    api.post.mockResolvedValue({ data: payload });
 
     const result = await createDocument({
       nome: "doc.pdf",
@@ -394,19 +399,24 @@ describe("createDocument", () => {
       file,
     });
 
-    expect(result).toHaveProperty("id_documento");
-    expect(result.nome).toBe("doc.pdf");
-    expect(result.setor).toBe("Técnico");
-    expect(result.nivel).toBe("Básico");
-    expect(result.tipo_arquivo).toBe("pdf");
+    expect(api.post).toHaveBeenCalledWith(
+      "/api/documentos/",
+      expect.any(FormData),
+      expect.objectContaining({
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 0,
+      })
+    );
+    expect(result).toEqual(payload);
+  });
 
-    expect(result.etiquetas).toEqual([
-      {
-        id_etiqueta: 1,
-        nome: "Técnico",
-      },
-    ]);
+  it("propaga erro da API quando o cadastro falha", async () => {
+    const file = new File(["teste"], "doc.pdf", { type: "application/pdf" });
+    const erro = { response: { data: { erro: "Falha no processamento" } } };
+    api.post.mockRejectedValue(erro);
 
-    expect(result.acesso_permitido).toBe(true);
+    await expect(
+      createDocument({ nome: "doc.pdf", setor: "Técnico", nivel: "Básico", file })
+    ).rejects.toEqual(erro);
   });
 });

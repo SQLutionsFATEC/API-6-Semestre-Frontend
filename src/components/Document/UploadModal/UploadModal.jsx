@@ -128,8 +128,18 @@ function UploadModal({
       if (onDocumentCreated) {
         onDocumentCreated(created);
       }
-    } catch (err) {
-      setError(err?.message || "Não foi possível cadastrar o documento.");
+       } catch (err) {
+      const mensagem =
+        err?.response?.data?.erro ||
+        err?.response?.data?.nome?.[0] ||
+        err?.response?.data?.nivel?.[0] ||
+        err?.response?.data?.data?.[0] ||
+        err?.response?.data?.setor?.[0] ||
+        err?.response?.data?.tipo_arquivo?.[0] ||
+        err?.message ||
+        "Não foi possível cadastrar o documento.";
+      alert(mensagem);
+      setError(mensagem);
     } finally {
       setIsSubmitting(false);
     }
