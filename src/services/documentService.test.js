@@ -506,4 +506,14 @@ describe("createDocument", () => {
     expect(formData.get("tipo_arquivo")).toBe("pdf");
     expect(formData.get("data")).toBe(file);
   });
+
+  it("propaga erro da API quando o cadastro falha", async () => {
+    const file = new File(["teste"], "doc.pdf", { type: "application/pdf" });
+    const erro = { response: { data: { erro: "Falha no processamento" } } };
+    api.post.mockRejectedValue(erro);
+
+    await expect(
+      createDocument({ nome: "doc.pdf", setor: "Técnico", nivel: "Básico", file })
+    ).rejects.toEqual(erro);
+  });
 });
