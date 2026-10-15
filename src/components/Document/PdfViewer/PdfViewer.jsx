@@ -3,8 +3,6 @@ import { FiX, FiZoomIn, FiZoomOut } from "react-icons/fi";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import "./PdfViewer.css";
-
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 400;
 const ZOOM_STEP = 25;
@@ -183,24 +181,30 @@ function PdfViewer({ document, onClose }) {
 
   return (
     <div
-      className="pdf-viewer-overlay"
+      className="pdf-viewer-overlay fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/72 p-5 max-[600px]:p-2"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"
       aria-label={`Visualização de ${document.nome}`}
     >
       <section
-        className="pdf-viewer"
+        className="pdf-viewer flex h-[min(92vh,1000px)] w-[min(1200px,96vw)] flex-col overflow-hidden rounded-xl bg-slate-800 shadow-[0_24px_64px_rgb(0_0_0_/_38%)] max-[600px]:h-[96vh] max-[600px]:w-full"
         onContextMenu={(event) => event.preventDefault()}
       >
-        <header className="pdf-viewer-header">
-          <h2 title={document.nome}>{document.nome}</h2>
-          <div className="pdf-viewer-controls">
+        <header className="pdf-viewer-header flex min-h-[60px] items-center gap-4 bg-white p-[10px_16px] max-[600px]:gap-1.5 max-[600px]:p-2">
+          <h2
+            className="m-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-base text-[#351b27] max-[600px]:text-[13px]"
+            title={document.nome}
+          >
+            {document.nome}
+          </h2>
+          <div className="pdf-viewer-controls flex items-center gap-3 text-sm text-[#351b27] max-[600px]:gap-1 max-[600px]:text-xs">
             <button
               type="button"
               aria-label="Diminuir zoom"
               onClick={handleZoomOut}
               disabled={zoom <= MIN_ZOOM}
+              className="inline-flex size-9 items-center justify-center rounded-md border-0 bg-transparent text-[#351b27] hover:enabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
             >
               <FiZoomOut aria-hidden="true" />
             </button>
@@ -210,13 +214,14 @@ function PdfViewer({ document, onClose }) {
               aria-label="Aumentar zoom"
               onClick={handleZoomIn}
               disabled={zoom >= MAX_ZOOM}
+              className="inline-flex size-9 items-center justify-center rounded-md border-0 bg-transparent text-[#351b27] hover:enabled:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
             >
               <FiZoomIn aria-hidden="true" />
             </button>
           </div>
           <button
             type="button"
-            className="pdf-viewer-close"
+            className="pdf-viewer-close inline-flex size-9 items-center justify-center rounded-md border-0 bg-transparent text-[#351b27] hover:bg-slate-100"
             aria-label="Fechar visualização"
             onClick={onClose}
           >
@@ -224,17 +229,18 @@ function PdfViewer({ document, onClose }) {
           </button>
         </header>
 
-        <div className="pdf-viewer-content">
+        <div className="pdf-viewer-content flex-1 overflow-auto p-5 text-center text-white [&>p]:my-6">
           {loading && <p role="status">Carregando documento...</p>}
           {error && <p role="alert">{error}</p>}
           {!loading && !error && pdfDocument && (
-            <div className="pdf-viewer-pages">
+            <div className="pdf-viewer-pages flex min-w-max flex-col items-center gap-4">
               {Array.from({ length: pdfDocument.numPages }, (_, index) => (
                 <canvas
                   key={index + 1}
                   ref={(canvas) => {
                     canvasRefs.current[index] = canvas;
                   }}
+                  className="block max-w-none bg-white shadow-[0_2px_12px_rgb(0_0_0_/_28%)]"
                   aria-label={`Página ${index + 1}`}
                 />
               ))}
@@ -242,17 +248,23 @@ function PdfViewer({ document, onClose }) {
           )}
           {documentFormat === "docx" && (
             <div
-              className="word-viewer-stage"
+              className="word-viewer-stage mx-auto w-max min-w-[min(100%,720px)] text-left text-slate-800 [transform-origin:top_center]"
               style={{ zoom: zoom / 100 }}
               hidden={loading || Boolean(error)}
             >
-              <div ref={wordContentRef} className="word-docx-content" />
+              <div
+                ref={wordContentRef}
+                className="word-docx-content w-max min-w-full [&_.docx-wrapper]:!bg-transparent [&_.docx-wrapper]:!p-0"
+              />
             </div>
           )}
           {!loading && !error && documentFormat === "doc" && (
-            <div className="word-viewer-stage" style={{ zoom: zoom / 100 }}>
+            <div
+              className="word-viewer-stage mx-auto w-max min-w-[min(100%,720px)] text-left text-slate-800 [transform-origin:top_center]"
+              style={{ zoom: zoom / 100 }}
+            >
               {wordMarkdown ? (
-                <article className="word-markdown-content">
+                <article className="word-markdown-content mx-auto min-h-[1056px] w-[min(816px,100%)] [overflow-wrap:anywhere] bg-white p-[72px] text-slate-800 leading-[1.6] shadow-[0_2px_12px_rgb(0_0_0_/_28%)] max-[600px]:min-h-0 max-[600px]:p-6 [&_h1]:mb-[1em] [&_h1]:leading-[1.25] [&_h2]:mb-[1em] [&_h2]:leading-[1.25] [&_h3]:mb-[1em] [&_h3]:leading-[1.25] [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-slate-300 [&_th]:p-[6px_10px] [&_td]:border [&_td]:border-slate-300 [&_td]:p-[6px_10px]">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {wordMarkdown}
                   </ReactMarkdown>
