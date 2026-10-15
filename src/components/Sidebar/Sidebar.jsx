@@ -9,7 +9,7 @@ import logo from "../../assets/logo.svg";
 import UploadModal from "../Document/UploadModal/UploadModal";
 import "./Sidebar.css";
 
-function Sidebar({ onOpenUploadModal }) {
+function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const handleOpenUpload = () => {
@@ -63,6 +63,7 @@ function Sidebar({ onOpenUploadModal }) {
       <UploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
+        onDocumentCreated={onDocumentCreated}
       />
     </>
   );

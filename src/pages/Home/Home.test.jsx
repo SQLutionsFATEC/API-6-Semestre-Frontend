@@ -135,6 +135,20 @@ describe("Home", () => {
     });
   });
 
+  it("busca novamente a lista após o cadastro de um documento", async () => {
+    const { rerender } = render(<Home documentsRefreshKey={0} />);
+
+    await waitFor(() => {
+      expect(fetchDocuments).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(<Home documentsRefreshKey={1} />);
+
+    await waitFor(() => {
+      expect(fetchDocuments).toHaveBeenCalledTimes(2);
+    });
+  });
+
   it("exibe mensagem de erro quando a busca falha", async () => {
     vi.mocked(fetchDocuments).mockRejectedValue(new Error("falha"));
 
@@ -239,6 +253,11 @@ describe("Home", () => {
     expect(screen.getByRole("dialog", { name: /Manual do sistema.pdf/ })).toBeInTheDocument();
     expect(await screen.findByLabelText("Página 1")).toBeInTheDocument();
     expect(fetchDocumentById).not.toHaveBeenCalled();
+
+    const pdfjs = await import("pdfjs-dist");
+    expect(pdfjs.getDocument).toHaveBeenCalledWith({
+      url: "http://localhost:8000/media/documentos/manual.pdf",
+    });
   });
 
   it("limita o zoom do visualizador entre 50% e 400% e permite fechá-lo", async () => {
@@ -322,7 +341,7 @@ describe("Home", () => {
     ).toBeInTheDocument();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "http://localhost:8000/media/documentos/manual.docx",
-      expect.objectContaining({ credentials: "include" })
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
 
@@ -359,7 +378,7 @@ describe("Home", () => {
     expect(legacyContent).toHaveTextContent("Texto do documento legado.");
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "http://localhost:8000/media/documentos/manual.doc",
-      expect.objectContaining({ credentials: "include" })
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
 

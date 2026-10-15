@@ -22,7 +22,7 @@ const EMPTY_FILTERS = {
   data_atualizacao: "",
 };
 
-function Home() {
+function Home({ documentsRefreshKey = 0 }) {
   const [search, setSearch] = useState("");
   const [documents, setDocuments] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
@@ -92,6 +92,7 @@ function Home() {
     filters.tags,
     filters.tipo,
     filters.data_atualizacao,
+    documentsRefreshKey,
   ]);
 
   function handleSearch(value) {
