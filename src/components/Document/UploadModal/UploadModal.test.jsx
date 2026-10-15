@@ -187,7 +187,14 @@ describe("UploadModal", () => {
   });
 
   it("trata erro na criação do documento", async () => {
-    const mockCreate = vi.fn().mockRejectedValue(new Error("Falha no servidor local"));
+    const mockCreate = vi.fn().mockRejectedValue({
+      message: "Request failed with status code 400",
+      response: {
+        data: {
+          erro: "Não foi possível gerar o embedding no Ollama.",
+        },
+      },
+    });
 
     render(
       <UploadModal
@@ -207,7 +214,9 @@ describe("UploadModal", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
 
-    expect(await screen.findByText("Falha no servidor local")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Não foi possível gerar o embedding no Ollama.")
+    ).toBeInTheDocument();
   });
 
   it("realiza o upload com sucesso, chama onDocumentCreated e exibe o modal de feedback", async () => {
