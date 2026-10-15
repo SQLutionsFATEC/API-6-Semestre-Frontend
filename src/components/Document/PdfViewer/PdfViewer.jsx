@@ -66,7 +66,6 @@ function PdfViewer({ document, onClose }) {
           pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
           loadingTask = pdfjs.getDocument({
             url: document.data,
-            withCredentials: true,
           });
           const loadedDocument = await loadingTask.promise;
           if (!cancelled) setPdfDocument(loadedDocument);
@@ -78,7 +77,6 @@ function PdfViewer({ document, onClose }) {
         }
 
         const response = await fetch(document.data, {
-          credentials: "include",
           signal: controller.signal,
         });
         if (!response.ok) {
