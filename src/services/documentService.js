@@ -18,30 +18,76 @@ export async function fetchDocuments({
   nome = "",
   contexto = "",
   page = 1,
+  etiquetas = "",
+  setor = "",
   tags = [],
   tipo = [],
   data_atualizacao = "",
 } = {}) {
-  const params = {
-    nome,
-    etiquetas: nome,
-    page,
-  };
+  const params = {};
 
-  if (contexto !== "") {
-    params.contexto = contexto;
+  const trimmedNome = typeof nome === "string" ? nome.trim() : "";
+  if (trimmedNome !== "") {
+    params.nome = trimmedNome;
   }
 
-  if (tags.length > 0) {
-    params.tags = tags;
+  const trimmedContexto = typeof contexto === "string" ? contexto.trim() : "";
+  if (trimmedContexto !== "") {
+    params.contexto = trimmedContexto;
   }
 
-  if (tipo.length > 0) {
-    params.tipo = tipo;
+  const searchTags = (() => {
+    if (typeof etiquetas === "string" && etiquetas.trim() !== "") {
+      return [etiquetas.trim()];
+    }
+    if (Array.isArray(etiquetas) && etiquetas.length > 0) {
+      return etiquetas
+        .map((item) => (typeof item === "string" ? item : item?.nome ?? ""))
+        .filter(Boolean);
+    }
+    return [];
+  })();
+
+  const filterTags = Array.isArray(tags)
+    ? tags
+        .map((item) => (typeof item === "string" ? item : item?.nome ?? ""))
+        .filter(Boolean)
+    : [];
+
+  const resolvedEtiquetas = [...new Set([...searchTags, ...filterTags])].join(" ");
+
+  if (resolvedEtiquetas !== "") {
+    params.etiquetas = resolvedEtiquetas;
   }
 
-  if (data_atualizacao !== "") {
-    params.data_atualizacao = data_atualizacao;
+  const resolvedSetor = (() => {
+    if (typeof setor === "string" && setor.trim() !== "") {
+      return setor.trim();
+    }
+    if (Array.isArray(setor) && setor.length > 0) {
+      return setor.filter(Boolean).join(", ");
+    }
+    if (typeof tipo === "string" && tipo.trim() !== "") {
+      return tipo.trim();
+    }
+    if (Array.isArray(tipo) && tipo.length > 0) {
+      return tipo.filter(Boolean).join(", ");
+    }
+    return "";
+  })();
+
+  if (resolvedSetor !== "") {
+    params.setor = resolvedSetor;
+  }
+
+  const trimmedDataAtualizacao =
+    typeof data_atualizacao === "string" ? data_atualizacao.trim() : "";
+  if (trimmedDataAtualizacao !== "") {
+    params.data_atualizacao = trimmedDataAtualizacao;
+  }
+
+  if (page !== undefined && page !== null && page !== "") {
+    params.page = page;
   }
 
   const response = await api.get("/api/documentos/", {
@@ -66,7 +112,7 @@ export async function fetchDocuments({
 }
 
 export async function fetchTags(search = "") {
-  const trimmedSearch = search.trim();
+  const trimmedSearch = typeof search === "string" ? search.trim() : "";
 
   if (trimmedSearch.length < 2) {
     return [];
@@ -83,6 +129,25 @@ export async function fetchTags(search = "") {
   }
 
   return response.data?.results || [];
+}
+
+export async function fetchAllAvailableTags() {
+  let response = await api.get("/api/etiquetas/");
+
+  if (Array.isArray(response.data)) {
+    return response.data;
+  }
+
+  const tags = [...(response.data?.results || [])];
+  let nextPage = response.data?.next;
+
+  while (nextPage) {
+    response = await api.get(nextPage);
+    tags.push(...(response.data?.results || []));
+    nextPage = response.data?.next;
+  }
+
+  return tags;
 }
 
 export async function fetchDocumentById(idDocumento) {

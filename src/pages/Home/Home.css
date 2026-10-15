@@ -43,7 +43,7 @@
   gap: 7px;
   padding: 0 16px;
   border: 1px solid #e2e8f0;
-  border-radius: 9999px;
+  border-radius: 999px;
   background-color: #ffffff;
   color: #475569;
   font-size: 13.5px;
@@ -61,6 +61,26 @@
 
 .filter-button svg {
   color: #7A0026;
+}
+
+.filter-button-active {
+  border-color: #7A0026;
+  color: #7A0026;
+}
+
+.filter-active-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  background-color: #7A0026;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* ===== Botão de Usuário ===== */
