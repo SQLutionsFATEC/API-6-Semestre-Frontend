@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   FiUser,
   FiMail,
@@ -17,16 +17,20 @@ const MOCK_USER = {
 
 function UserModal({ isOpen, onClose, user = MOCK_USER, onUserUpdated, onUserDeleted }) {
   const [mode, setMode] = useState("view");
-  const [formData, setFormData] = useState({ name: "", email: "" });
+  const [formData, setFormData] = useState({ name: user?.name ?? "", email: user?.email ?? "" });
   const [errors, setErrors] = useState({});
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  const [prevUser, setPrevUser] = useState(user);
 
-  useEffect(() => {
+  if (isOpen !== prevIsOpen || user !== prevUser) {
+    setPrevIsOpen(isOpen);
+    setPrevUser(user);
     if (isOpen) {
       setMode("view");
-      setFormData({ name: user.name, email: user.email });
+      setFormData({ name: user?.name ?? "", email: user?.email ?? "" });
       setErrors({});
     }
-  }, [isOpen, user]);
+  }
 
   if (!isOpen) return null;
 
