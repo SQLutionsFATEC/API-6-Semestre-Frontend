@@ -112,21 +112,10 @@ export async function createDocument({
     formData.append("data", file);
   }
 
-  await new Promise((resolve) => setTimeout(resolve, 300));
+    const response = await api.post("/api/documentos/", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 0,
+  });
 
-  return {
-    id_documento: Date.now(),
-    tipo_arquivo: "pdf",
-    nome: (nome || "").trim(),
-    setor: (setor || "").trim(),
-    nivel: (nivel || "").trim(),
-    data_atualizacao: new Date().toISOString(),
-    etiquetas: [
-      {
-        id_etiqueta: 1,
-        nome: (setor || "").trim(),
-      },
-    ],
-    acesso_permitido: true,
-  };
+  return response.data;
 }
