@@ -74,7 +74,7 @@ function PdfViewer({ document, onClose }) {
       }
     };
 
-    loadDocument();
+    void loadDocument();
 
     return () => {
       cancelled = true;
@@ -119,7 +119,7 @@ function PdfViewer({ document, onClose }) {
       }
     };
 
-    renderPages();
+    void renderPages();
 
     return () => {
       cancelled = true;
