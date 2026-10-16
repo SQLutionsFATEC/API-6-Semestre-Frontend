@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { FiX, FiZoomIn, FiZoomOut } from "react-icons/fi";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 400;
@@ -21,7 +19,6 @@ function getDocumentFormat(document) {
 function PdfViewer({ document, onClose }) {
   const [zoom, setZoom] = useState(100);
   const [pdfDocument, setPdfDocument] = useState(null);
-  const [wordMarkdown, setWordMarkdown] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const canvasRefs = useRef([]);
@@ -48,45 +45,27 @@ function PdfViewer({ document, onClose }) {
 
     let cancelled = false;
     let loadingTask;
-    const controller = new AbortController();
 
     const loadDocument = async () => {
       try {
-        if (documentFormat === "pdf") {
-          const [pdfjs, worker] = await Promise.all([
-            import("pdfjs-dist"),
-            import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
-          ]);
-          if (cancelled) return;
-
-          pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-          loadingTask = pdfjs.getDocument({
-            url: document.data,
-          });
-          const loadedDocument = await loadingTask.promise;
-          if (!cancelled) setPdfDocument(loadedDocument);
-          return;
-        }
-
-        if (documentFormat !== "doc") {
+        if (documentFormat !== "pdf") {
           throw new Error(`Formato não suportado: ${documentFormat || "desconhecido"}`);
         }
 
-        const response = await fetch(document.data, {
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          throw new Error(`Falha ao buscar o documento (${response.status}).`);
-        }
-
-        const content = await response.arrayBuffer();
+        const [pdfjs, worker] = await Promise.all([
+          import("pdfjs-dist"),
+          import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
+        ]);
         if (cancelled) return;
 
-        const { toMarkdown } = await import("@mdgate/doc");
-        const markdown = await toMarkdown(new Uint8Array(content));
-        if (!cancelled) setWordMarkdown(markdown);
+        pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+        loadingTask = pdfjs.getDocument({
+          url: document.data,
+        });
+        const loadedDocument = await loadingTask.promise;
+        if (!cancelled) setPdfDocument(loadedDocument);
       } catch (loadError) {
-        if (!cancelled && loadError.name !== "AbortError") {
+        if (!cancelled) {
           console.error("Erro ao carregar PDF:", loadError);
           setError("Não foi possível carregar ou exibir o documento.");
         }
@@ -99,7 +78,6 @@ function PdfViewer({ document, onClose }) {
 
     return () => {
       cancelled = true;
-      controller.abort();
       loadingTask?.destroy();
     };
   }, [document, documentFormat]);
@@ -228,22 +206,6 @@ function PdfViewer({ document, onClose }) {
                   aria-label={`Página ${index + 1}`}
                 />
               ))}
-            </div>
-          )}
-          {!loading && !error && documentFormat === "doc" && (
-            <div
-              className="word-viewer-stage mx-auto w-max min-w-[min(100%,720px)] text-left text-slate-800 [transform-origin:top_center]"
-              style={{ zoom: zoom / 100 }}
-            >
-              {wordMarkdown ? (
-                <article className="word-markdown-content mx-auto min-h-[1056px] w-[min(816px,100%)] [overflow-wrap:anywhere] bg-white p-[72px] text-slate-800 leading-[1.6] shadow-[0_2px_12px_rgb(0_0_0_/_28%)] max-[600px]:min-h-0 max-[600px]:p-6 [&_h1]:mb-[1em] [&_h1]:leading-[1.25] [&_h2]:mb-[1em] [&_h2]:leading-[1.25] [&_h3]:mb-[1em] [&_h3]:leading-[1.25] [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-slate-300 [&_th]:p-[6px_10px] [&_td]:border [&_td]:border-slate-300 [&_td]:p-[6px_10px]">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {wordMarkdown}
-                  </ReactMarkdown>
-                </article>
-              ) : (
-                <p>Este arquivo não contém texto que possa ser exibido.</p>
-              )}
             </div>
           )}
         </div>

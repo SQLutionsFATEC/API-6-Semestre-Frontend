@@ -32,14 +32,6 @@ vi.mock("pdfjs-dist", () => ({
   })),
 }));
 
-vi.mock("@mdgate/doc", () => ({
-  toMarkdown: vi.fn().mockResolvedValue("# Documento DOC\n\nTexto do documento legado."),
-}));
-
-vi.mock("react-markdown", () => ({
-  default: ({ children }) => children,
-}));
-
 const documentsPage = {
   results: [
     {
@@ -300,43 +292,6 @@ describe("Home", () => {
     expect(
       screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
     ).not.toBeInTheDocument();
-  });
-
-  it("exibe DOC legado localmente sem gerar PDF", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
-      })
-    );
-    vi.mocked(fetchDocuments).mockResolvedValue({
-      ...documentsPage,
-      results: [
-        {
-          ...documentsPage.results[0],
-          nome: "Manual legado.doc",
-          tipo_arquivo: "doc",
-          data: "http://localhost:8000/media/documentos/manual.doc",
-        },
-      ],
-    });
-
-    render(<Home />);
-    await waitFor(() => {
-      expect(screen.getByText("Manual legado.doc")).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
-
-    const legacyContent = await screen.findByText((_, element) =>
-      element.classList.contains("word-markdown-content")
-    );
-    expect(legacyContent).toHaveTextContent("Documento DOC");
-    expect(legacyContent).toHaveTextContent("Texto do documento legado.");
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      "http://localhost:8000/media/documentos/manual.doc",
-      expect.objectContaining({ signal: expect.any(AbortSignal) })
-    );
   });
 
   it("abre o modal direto quando ja existe documento selecionado", async () => {
