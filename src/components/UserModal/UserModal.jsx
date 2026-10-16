@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   FiUser,
   FiMail,
@@ -15,20 +15,13 @@ const MOCK_USER = {
   level: "Nível 1",
 };
 
-function UserModal({ isOpen, onClose, user = MOCK_USER, onUserUpdated, onUserDeleted }) {
+function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted }) {
   const [mode, setMode] = useState("view");
-  const [formData, setFormData] = useState({ name: "", email: "" });
+  const [formData, setFormData] = useState(() => ({
+    name: user.name,
+    email: user.email,
+  }));
   const [errors, setErrors] = useState({});
-
-  useEffect(() => {
-    if (isOpen) {
-      setMode("view");
-      setFormData({ name: user.name, email: user.email });
-      setErrors({});
-    }
-  }, [isOpen, user]);
-
-  if (!isOpen) return null;
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -218,6 +211,26 @@ function UserModal({ isOpen, onClose, user = MOCK_USER, onUserUpdated, onUserDel
         )}
       </div>
     </div>
+  );
+}
+
+function UserModal({
+  isOpen,
+  onClose,
+  user = MOCK_USER,
+  onUserUpdated,
+  onUserDeleted,
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <UserModalContent
+      key={`${user.name}-${user.email}`}
+      onClose={onClose}
+      user={user}
+      onUserUpdated={onUserUpdated}
+      onUserDeleted={onUserDeleted}
+    />
   );
 }
 

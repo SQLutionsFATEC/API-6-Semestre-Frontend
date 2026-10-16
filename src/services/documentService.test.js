@@ -12,6 +12,7 @@ import {
 vi.mock("./api", () => ({
   default: {
     get: vi.fn(),
+    post: vi.fn(),
   },
 }));
 
@@ -382,31 +383,33 @@ describe("createDocument", () => {
     vi.clearAllMocks();
   });
 
-  it("mocka a criação do documento e retorna os dados formatados", async () => {
+  it("envia os dados do documento para a API e retorna a resposta", async () => {
     const file = new File(["teste"], "doc.pdf", {
       type: "application/pdf",
     });
+    const createdDocument = {
+      id_documento: 101,
+      nome: "doc.pdf",
+      setor: "Técnico",
+      nivel: "Básico",
+      tipo_arquivo: "pdf",
+    };
+    api.post.mockResolvedValue({ data: createdDocument });
 
-    const result = await createDocument({
+    await expect(createDocument({
       nome: "doc.pdf",
       setor: "Técnico",
       nivel: "Básico",
       file,
-    });
+    })).resolves.toEqual(createdDocument);
 
-    expect(result).toHaveProperty("id_documento");
-    expect(result.nome).toBe("doc.pdf");
-    expect(result.setor).toBe("Técnico");
-    expect(result.nivel).toBe("Básico");
-    expect(result.tipo_arquivo).toBe("pdf");
-
-    expect(result.etiquetas).toEqual([
-      {
-        id_etiqueta: 1,
-        nome: "Técnico",
-      },
-    ]);
-
-    expect(result.acesso_permitido).toBe(true);
+    expect(api.post).toHaveBeenCalledTimes(1);
+    const [url, formData] = api.post.mock.calls[0];
+    expect(url).toBe("/api/documentos/");
+    expect(formData.get("nome")).toBe("doc.pdf");
+    expect(formData.get("setor")).toBe("Técnico");
+    expect(formData.get("nivel")).toBe("Básico");
+    expect(formData.get("tipo_arquivo")).toBe("pdf");
+    expect(formData.get("data")).toBe(file);
   });
 });

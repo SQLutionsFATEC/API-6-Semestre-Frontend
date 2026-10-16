@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import Home from "../../pages/Home/Home";
 import {
@@ -10,6 +10,26 @@ import {
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
   fetchDocumentById: vi.fn(),
+}));
+
+vi.mock("pdfjs-dist", () => ({
+  GlobalWorkerOptions: { workerSrc: "" },
+  getDocument: vi.fn(() => ({
+    promise: Promise.resolve({
+      numPages: 1,
+      getPage: vi.fn().mockResolvedValue({
+        getViewport: vi.fn(({ scale }) => ({
+          width: 600 * scale,
+          height: 800 * scale,
+        })),
+        render: vi.fn(() => ({
+          promise: Promise.resolve(),
+          cancel: vi.fn(),
+        })),
+      }),
+    }),
+    destroy: vi.fn(),
+  })),
 }));
 
 const documentsPage = {
@@ -26,8 +46,8 @@ const documentsPage = {
     },
     {
       id_documento: 2,
-      tipo_arquivo: "docx",
-      nome: "Ata de reuniao.docx",
+      tipo_arquivo: "pdf",
+      nome: "Ata de reuniao.pdf",
       setor: "Administrativo",
       data_atualizacao: "2026-08-01T09:00:00Z",
       nivel: "Comercial",
@@ -69,9 +89,15 @@ function openFirstDocument() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({});
 
   vi.mocked(fetchDocuments).mockResolvedValue(documentsPage);
   vi.mocked(fetchDocumentById).mockResolvedValue(documentDetail);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("Home", () => {
@@ -82,7 +108,7 @@ describe("Home", () => {
       expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Ata de reuniao.docx")).toBeInTheDocument();
+    expect(screen.getByText("Ata de reuniao.pdf")).toBeInTheDocument();
     expect(fetchDocuments).toHaveBeenCalledWith({
       nome: "",
       contexto: "",
@@ -90,6 +116,20 @@ describe("Home", () => {
       tags: [],
       tipo: [],
       data_atualizacao: "",
+    });
+  });
+
+  it("busca novamente a lista após o cadastro de um documento", async () => {
+    const { rerender } = render(<Home documentsRefreshKey={0} />);
+
+    await waitFor(() => {
+      expect(fetchDocuments).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(<Home documentsRefreshKey={1} />);
+
+    await waitFor(() => {
+      expect(fetchDocuments).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -185,11 +225,7 @@ describe("Home", () => {
     expect(screen.getByText("Tecnico")).toBeInTheDocument();
   });
 
-  it("abre o PDF diretamente ao clicar no botão de visualizar do cartão", async () => {
-    const openSpy = vi
-      .spyOn(window, "open")
-      .mockImplementation(() => null);
-
+  it("abre o PDF no visualizador ao clicar no botão do cartão", async () => {
     render(<Home />);
 
     await waitFor(() => {
@@ -198,13 +234,64 @@ describe("Home", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
 
-    expect(openSpy).toHaveBeenCalledWith(
-      documentsPage.results[0].data,
-      "_blank"
-    );
+    expect(screen.getByRole("dialog", { name: /Manual do sistema.pdf/ })).toBeInTheDocument();
+    expect(await screen.findByLabelText("Página 1")).toBeInTheDocument();
     expect(fetchDocumentById).not.toHaveBeenCalled();
 
-    openSpy.mockRestore();
+    const pdfjs = await import("pdfjs-dist");
+    expect(pdfjs.getDocument).toHaveBeenCalledWith({
+      url: "http://localhost:8000/media/documentos/manual.pdf",
+    });
+  });
+
+  it("limita o zoom do visualizador entre 50% e 400% e permite fechá-lo", async () => {
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
+
+    const zoomIn = screen.getByRole("button", { name: "Aumentar zoom" });
+    for (let index = 0; index < 20; index += 1) fireEvent.click(zoomIn);
+
+    expect(screen.getByText("400%")).toBeInTheDocument();
+    expect(zoomIn).toBeDisabled();
+
+    const zoomOut = screen.getByRole("button", { name: "Diminuir zoom" });
+    for (let index = 0; index < 20; index += 1) fireEvent.click(zoomOut);
+
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(zoomOut).toBeDisabled();
+
+    fireEvent.click(screen.getByLabelText("Fechar visualização"));
+    expect(
+      screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it("fecha ao clicar fora e bloqueia o menu de contexto no documento", async () => {
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
+    await screen.findByLabelText("Página 1");
+
+    const viewerContent = screen.getByLabelText("Página 1").parentElement.parentElement;
+    const contextMenuEvent = new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+    });
+    fireEvent(viewerContent, contextMenuEvent);
+    expect(contextMenuEvent.defaultPrevented).toBe(true);
+
+    fireEvent.click(globalThis.document.querySelector(".pdf-viewer-overlay"));
+    expect(
+      screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
+    ).not.toBeInTheDocument();
   });
 
   it("abre o modal direto quando ja existe documento selecionado", async () => {
@@ -281,11 +368,7 @@ describe("Home", () => {
     expect(getModal()).not.toBeInTheDocument();
   });
 
-  it("abre o PDF em nova aba ao visualizar pelo modal", async () => {
-    const openSpy = vi
-      .spyOn(window, "open")
-      .mockImplementation(() => null);
-
+  it("abre o PDF no visualizador ao visualizar pelos detalhes", async () => {
     render(<Home />);
 
     await waitFor(() => {
@@ -300,24 +383,14 @@ describe("Home", () => {
 
     fireEvent.click(getModal().querySelector("footer .modal-view-button"));
 
-    expect(openSpy).toHaveBeenCalledWith(documentDetail.data, "_blank");
-
-    openSpy.mockRestore();
+    expect(screen.getByRole("dialog", { name: /Manual do sistema.pdf/ })).toBeInTheDocument();
   });
 
-  it("nao abre o PDF quando o documento nao tem URL de arquivo", async () => {
+  it("nao abre o visualizador quando o documento nao tem URL de arquivo", async () => {
     vi.mocked(fetchDocumentById).mockResolvedValue({
       ...documentDetail,
       data: null,
     });
-
-    const openSpy = vi
-      .spyOn(window, "open")
-      .mockImplementation(() => null);
-
-    const consoleSpy = vi
-      .spyOn(console, "log")
-      .mockImplementation(() => {});
 
     render(<Home />);
 
@@ -334,10 +407,7 @@ describe("Home", () => {
     const viewButton = getModal().querySelector("footer .modal-view-button");
 
     expect(viewButton).toBeDisabled();
-    expect(openSpy).not.toHaveBeenCalled();
-
-    openSpy.mockRestore();
-    consoleSpy.mockRestore();
+    expect(screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })).not.toBeInTheDocument();
   });
 
   it("documentos restritos exibem inequivocamente o ícone de cadeado", async () => {
@@ -410,10 +480,6 @@ describe("Home", () => {
       acesso_permitido: false,
     });
 
-    const openSpy = vi
-      .spyOn(window, "open")
-      .mockImplementation(() => null);
-
     render(<Home />);
 
     await waitFor(() => {
@@ -428,11 +494,9 @@ describe("Home", () => {
 
     fireEvent.click(getModal().querySelector("footer .modal-view-button"));
 
-    expect(openSpy).not.toHaveBeenCalled();
     expect(
       screen.getByRole("heading", { name: "Acesso Restrito" })
     ).toBeInTheDocument();
-
-    openSpy.mockRestore();
+    expect(screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })).not.toBeInTheDocument();
   });
 });
