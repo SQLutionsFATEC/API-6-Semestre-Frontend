@@ -126,12 +126,6 @@ function Home({ documentsRefreshKey = 0 }) {
     setIsFilterSidebarOpen(false);
   }
 
-  function handleClearFilters() {
-    setFilters(EMPTY_FILTERS);
-    setCurrentPage(1);
-    setIsFilterSidebarOpen(false);
-  }
-
   function handleViewPdf(document) {
     if (document.acesso_permitido === false) {
       setRestrictedModalOpen(true);

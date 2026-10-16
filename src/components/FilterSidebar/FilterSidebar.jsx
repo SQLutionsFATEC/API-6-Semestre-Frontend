@@ -34,8 +34,7 @@ function copyFilters(filters) {
   };
 }
 
-function FilterSidebar({
-  isOpen,
+function FilterSidebarContent({
   onClose,
   filters = EMPTY_FILTERS,
   onApplyFilters,
@@ -49,20 +48,9 @@ function FilterSidebar({
   const [tagError, setTagError] = useState("");
 
   useEffect(() => {
-    if (isOpen) {
-      setDraftFilters(copyFilters(filters));
-    }
-  }, [isOpen, filters]);
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
     const query = tagSearch.trim();
 
     if (query.length < 2) {
-      setAvailableTags([]);
-      setLoadingTags(false);
-      setTagError("");
       return undefined;
     }
 
@@ -94,11 +82,9 @@ function FilterSidebar({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [tagSearch, isOpen]);
+  }, [tagSearch]);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
-
     function handleEscape(event) {
       if (event.key === "Escape") {
         onClose();
@@ -110,7 +96,18 @@ function FilterSidebar({
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, onClose]);
+  }, [onClose]);
+
+  function handleTagSearchChange(event) {
+    const value = event.target.value;
+    setTagSearch(value);
+
+    if (value.trim().length < 2) {
+      setAvailableTags([]);
+      setLoadingTags(false);
+      setTagError("");
+    }
+  }
 
   function toggleTag(tagId) {
     setDraftFilters((current) => ({
@@ -148,8 +145,6 @@ function FilterSidebar({
     onApplyFilters(copyFilters(draftFilters));
     onClose();
   }
-
-  if (!isOpen) return null;
 
   return (
     <div
@@ -201,7 +196,7 @@ function FilterSidebar({
                 type="search"
                 value={tagSearch}
                 placeholder="Digite pelo menos 2 caracteres"
-                onChange={(event) => setTagSearch(event.target.value)}
+                onChange={handleTagSearchChange}
               />
             </div>
 
@@ -317,6 +312,12 @@ function FilterSidebar({
       </aside>
     </div>
   );
+}
+
+function FilterSidebar({ isOpen, ...props }) {
+  if (!isOpen) return null;
+
+  return <FilterSidebarContent {...props} />;
 }
 
 export default FilterSidebar;
