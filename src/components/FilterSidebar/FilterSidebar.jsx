@@ -327,10 +327,7 @@ function FilterSidebar({
 
             <div className="filter-multiselect" ref={sectorSelectRef}>
               <div className="filter-multiselect-trigger">
-                <div
-                  className="filter-multiselect-values"
-                  onClick={() => setIsSectorSelectOpen(true)}
-                >
+                <div className="filter-multiselect-values">
                   {draftFilters.tipo.length > 0 ? (
                     draftFilters.tipo.map((sectorValue) => {
                       const label = getSectorLabel(sectorValue);

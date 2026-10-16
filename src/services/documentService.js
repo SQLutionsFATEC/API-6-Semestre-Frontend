@@ -86,7 +86,7 @@ export async function fetchDocuments({
     params.data_atualizacao = trimmedDataAtualizacao;
   }
 
-  if (page !== undefined && page !== null && page !== "") {
+  if (page !== undefined && page !== null) {
     params.page = page;
   }
 
