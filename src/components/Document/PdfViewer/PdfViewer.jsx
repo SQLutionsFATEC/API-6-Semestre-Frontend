@@ -25,7 +25,6 @@ function PdfViewer({ document, onClose }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const canvasRefs = useRef([]);
-  const wordContentRef = useRef(null);
   const documentFormat = getDocumentFormat(document);
 
   useEffect(() => {
@@ -50,7 +49,6 @@ function PdfViewer({ document, onClose }) {
     let cancelled = false;
     let loadingTask;
     const controller = new AbortController();
-    const wordContentElement = wordContentRef.current;
 
     const loadDocument = async () => {
       try {
@@ -70,7 +68,7 @@ function PdfViewer({ document, onClose }) {
           return;
         }
 
-        if (documentFormat !== "doc" && documentFormat !== "docx") {
+        if (documentFormat !== "doc") {
           throw new Error(`Formato não suportado: ${documentFormat || "desconhecido"}`);
         }
 
@@ -84,22 +82,9 @@ function PdfViewer({ document, onClose }) {
         const content = await response.arrayBuffer();
         if (cancelled) return;
 
-        if (documentFormat === "docx") {
-          const { renderAsync } = await import("docx-preview");
-          if (cancelled || !wordContentElement) return;
-
-          wordContentElement.replaceChildren();
-          await renderAsync(
-            content,
-            wordContentElement,
-            wordContentElement,
-            { inWrapper: true }
-          );
-        } else {
-          const { toMarkdown } = await import("@mdgate/doc");
-          const markdown = await toMarkdown(new Uint8Array(content));
-          if (!cancelled) setWordMarkdown(markdown);
-        }
+        const { toMarkdown } = await import("@mdgate/doc");
+        const markdown = await toMarkdown(new Uint8Array(content));
+        if (!cancelled) setWordMarkdown(markdown);
       } catch (loadError) {
         if (!cancelled && loadError.name !== "AbortError") {
           console.error("Erro ao carregar PDF:", loadError);
@@ -116,7 +101,6 @@ function PdfViewer({ document, onClose }) {
       cancelled = true;
       controller.abort();
       loadingTask?.destroy();
-      wordContentElement?.replaceChildren();
     };
   }, [document, documentFormat]);
 
@@ -244,18 +228,6 @@ function PdfViewer({ document, onClose }) {
                   aria-label={`Página ${index + 1}`}
                 />
               ))}
-            </div>
-          )}
-          {documentFormat === "docx" && (
-            <div
-              className="word-viewer-stage mx-auto w-max min-w-[min(100%,720px)] text-left text-slate-800 [transform-origin:top_center]"
-              style={{ zoom: zoom / 100 }}
-              hidden={loading || Boolean(error)}
-            >
-              <div
-                ref={wordContentRef}
-                className="word-docx-content w-max min-w-full [&_.docx-wrapper]:!bg-transparent [&_.docx-wrapper]:!p-0"
-              />
             </div>
           )}
           {!loading && !error && documentFormat === "doc" && (

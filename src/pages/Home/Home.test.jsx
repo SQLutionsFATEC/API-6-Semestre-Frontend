@@ -32,14 +32,6 @@ vi.mock("pdfjs-dist", () => ({
   })),
 }));
 
-vi.mock("docx-preview", () => ({
-  renderAsync: vi.fn(async (_document, contentContainer) => {
-    const paragraph = globalThis.document.createElement("p");
-    paragraph.textContent = "Conteúdo renderizado do DOCX";
-    contentContainer.append(paragraph);
-  }),
-}));
-
 vi.mock("@mdgate/doc", () => ({
   toMarkdown: vi.fn().mockResolvedValue("# Documento DOC\n\nTexto do documento legado."),
 }));
@@ -62,8 +54,8 @@ const documentsPage = {
     },
     {
       id_documento: 2,
-      tipo_arquivo: "docx",
-      nome: "Ata de reuniao.docx",
+      tipo_arquivo: "pdf",
+      nome: "Ata de reuniao.pdf",
       setor: "Administrativo",
       data_atualizacao: "2026-08-01T09:00:00Z",
       nivel: "Comercial",
@@ -124,7 +116,7 @@ describe("Home", () => {
       expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Ata de reuniao.docx")).toBeInTheDocument();
+    expect(screen.getByText("Ata de reuniao.pdf")).toBeInTheDocument();
     expect(fetchDocuments).toHaveBeenCalledWith({
       nome: "",
       contexto: "",
@@ -308,41 +300,6 @@ describe("Home", () => {
     expect(
       screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
     ).not.toBeInTheDocument();
-  });
-
-  it("renderiza DOCX localmente dentro do visualizador", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8)),
-      })
-    );
-    vi.mocked(fetchDocuments).mockResolvedValue({
-      ...documentsPage,
-      results: [
-        {
-          ...documentsPage.results[0],
-          nome: "Manual Word.docx",
-          tipo_arquivo: "docx",
-          data: "http://localhost:8000/media/documentos/manual.docx",
-        },
-      ],
-    });
-
-    render(<Home />);
-    await waitFor(() => {
-      expect(screen.getByText("Manual Word.docx")).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
-
-    expect(
-      await screen.findByText("Conteúdo renderizado do DOCX")
-    ).toBeInTheDocument();
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      "http://localhost:8000/media/documentos/manual.docx",
-      expect.objectContaining({ signal: expect.any(AbortSignal) })
-    );
   });
 
   it("exibe DOC legado localmente sem gerar PDF", async () => {
