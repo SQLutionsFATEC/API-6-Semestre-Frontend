@@ -15,7 +15,7 @@ const MOCK_USER = {
   level: "Nível 1",
 };
 
-function UserModal({ isOpen, onClose, user = MOCK_USER, onUserUpdated, onUserDeleted }) {
+function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen }) {
   const [mode, setMode] = useState("view");
   const [formData, setFormData] = useState({ name: user?.name ?? "", email: user?.email ?? "" });
   const [errors, setErrors] = useState({});
@@ -222,6 +222,27 @@ function UserModal({ isOpen, onClose, user = MOCK_USER, onUserUpdated, onUserDel
         )}
       </div>
     </div>
+  );
+}
+
+function UserModal({
+  isOpen,
+  onClose,
+  user = MOCK_USER,
+  onUserUpdated,
+  onUserDeleted,
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <UserModalContent
+      key={`${user.name}-${user.email}`}
+      onClose={onClose}
+      isOpen={isOpen}
+      user={user}
+      onUserUpdated={onUserUpdated}
+      onUserDeleted={onUserDeleted}
+    />
   );
 }
 

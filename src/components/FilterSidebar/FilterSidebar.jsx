@@ -79,12 +79,12 @@ function isValidFilterDate(value) {
   );
 }
 
-function FilterSidebar({
-  isOpen,
+function FilterSidebarContent({
   onClose,
   filters = EMPTY_FILTERS,
   onApplyFilters,
   onClearFilters,
+  isOpen,
 }) {
   const [draftFilters, setDraftFilters] = useState(() =>
     copyFilters(filters)
@@ -146,8 +146,6 @@ function FilterSidebar({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
-
     function handleEscape(event) {
       if (event.key === "Escape") {
         onClose();
@@ -159,7 +157,18 @@ function FilterSidebar({
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, onClose]);
+  }, [onClose]);
+
+  function handleTagSearchChange(event) {
+    const value = event.target.value;
+    setTagSearch(value);
+
+    if (value.trim().length < 2) {
+      setAvailableTags([]);
+      setLoadingTags(false);
+      setTagError("");
+    }
+  }
 
   function toggleTag(tagName) {
     setDraftFilters((current) => ({
@@ -201,8 +210,6 @@ function FilterSidebar({
     onApplyFilters(nextFilters);
     onClose();
   }
-
-  if (!isOpen) return null;
 
   return (
     <div
@@ -436,6 +443,12 @@ function FilterSidebar({
       </aside>
     </div>
   );
+}
+
+function FilterSidebar({ isOpen, ...props }) {
+  if (!isOpen) return null;
+
+  return <FilterSidebarContent {...props} isOpen={isOpen} />;
 }
 
 export default FilterSidebar;

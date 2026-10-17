@@ -50,8 +50,8 @@ export async function fetchDocuments({
 
   const filterTags = Array.isArray(tags)
     ? tags
-        .map((item) => (typeof item === "string" ? item : item?.nome ?? ""))
-        .filter(Boolean)
+      .map((item) => (typeof item === "string" ? item : item?.nome ?? ""))
+      .filter(Boolean)
     : [];
 
   const resolvedEtiquetas = [...new Set([...searchTags, ...filterTags])].join(" ");
@@ -177,21 +177,6 @@ export async function createDocument({
     formData.append("data", file);
   }
 
-  await new Promise((resolve) => setTimeout(resolve, 300));
-
-  return {
-    id_documento: Date.now(),
-    tipo_arquivo: "pdf",
-    nome: (nome || "").trim(),
-    setor: (setor || "").trim(),
-    nivel: (nivel || "").trim(),
-    data_atualizacao: new Date().toISOString(),
-    etiquetas: [
-      {
-        id_etiqueta: 1,
-        nome: (setor || "").trim(),
-      },
-    ],
-    acesso_permitido: true,
-  };
+  const response = await api.post("/api/documentos/", formData);
+  return response.data;
 }

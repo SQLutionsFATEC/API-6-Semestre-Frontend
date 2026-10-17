@@ -1,12 +1,13 @@
 import { FiAlertCircle, FiFileText, FiFilter, FiUser } from "react-icons/fi";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import SearchBar from "../../components/SearchBar/SearchBar";
-import FilterSidebar from "../../components/FilterSidebar/FilterSidebar";
 import DocumentList from "../../components/Document/DocumentList/DocumentList";
-import Pagination from "../../components/Pagination/Pagination";
 import DocumentModal from "../../components/Document/DocumentModal/DocumentModal";
+import PdfViewer from "../../components/Document/PdfViewer/PdfViewer";
 import RestrictedModal from "../../components/Document/RestrictedModal/RestrictedModal";
+import FilterSidebar from "../../components/FilterSidebar/FilterSidebar";
+import Pagination from "../../components/Pagination/Pagination";
+import SearchBar from "../../components/SearchBar/SearchBar";
 import UserModal from "../../components/UserModal/UserModal";
 
 import {
@@ -29,7 +30,7 @@ const MOCK_CURRENT_USER = {
   level: "Nível 1",
 };
 
-function Home() {
+function Home({ documentsRefreshKey = 0 }) {
   const [search, setSearch] = useState("");
   const [searchMode, setSearchMode] = useState("nome");
   const [documents, setDocuments] = useState([]);
@@ -46,6 +47,7 @@ function Home() {
     (filters.data_atualizacao ? 1 : 0);
 
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [viewerDocument, setViewerDocument] = useState(null);
   const [documentDetailsLoading, setDocumentDetailsLoading] = useState(false);
   const [documentDetailsError, setDocumentDetailsError] = useState(null);
   const [restrictedModalOpen, setRestrictedModalOpen] = useState(false);
@@ -55,6 +57,10 @@ function Home() {
 
   const handleCloseFilters = useCallback(() => {
     setIsFilterSidebarOpen(false);
+  }, []);
+
+  const handleClosePdfViewer = useCallback(() => {
+    setViewerDocument(null);
   }, []);
 
   useEffect(() => {
@@ -116,6 +122,7 @@ function Home() {
     filters.tags,
     filters.tipo,
     filters.data_atualizacao,
+    documentsRefreshKey,
   ]);
 
   function handleSearch(value) {
@@ -159,7 +166,7 @@ function Home() {
     }
 
     if (document.data) {
-      window.open(document.data, "_blank");
+      setViewerDocument(document);
       return;
     }
 
@@ -328,6 +335,13 @@ function Home() {
         isOpen={restrictedModalOpen}
         onClose={() => setRestrictedModalOpen(false)}
       />
+
+      <PdfViewer
+        key={viewerDocument?.data || "closed"}
+        document={viewerDocument}
+        onClose={handleClosePdfViewer}
+      />
+
       <UserModal
         isOpen={isUserModalOpen}
         onClose={() => setIsUserModalOpen(false)}

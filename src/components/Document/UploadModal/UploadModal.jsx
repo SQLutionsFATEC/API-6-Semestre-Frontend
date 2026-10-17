@@ -129,7 +129,25 @@ function UploadModal({
         onDocumentCreated(created);
       }
     } catch (err) {
-      setError(err?.message || "Não foi possível cadastrar o documento.");
+      const responseData = err?.response?.data;
+      const responseMessage =
+        typeof responseData === "string"
+          ? responseData
+          : responseData?.erro ||
+            Object.entries(responseData || {})
+              .map(([field, messages]) => {
+                const details = Array.isArray(messages)
+                  ? messages.join(", ")
+                  : messages;
+                return `${field}: ${details}`;
+              })
+              .join(" ");
+
+      setError(
+        responseMessage ||
+          err?.message ||
+          "Não foi possível cadastrar o documento."
+      );
     } finally {
       setIsSubmitting(false);
     }

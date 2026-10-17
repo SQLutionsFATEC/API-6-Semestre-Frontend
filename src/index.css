@@ -19,3 +19,10 @@ body,
 body {
   margin: 0;
 }
+
+@media print {
+  body.pdf-viewer-open,
+  body.pdf-viewer-open * {
+    visibility: hidden !important;
+  }
+}
