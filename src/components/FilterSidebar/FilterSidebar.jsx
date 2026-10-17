@@ -159,16 +159,16 @@ function FilterSidebarContent({
     };
   }, [onClose]);
 
-  function handleTagSearchChange(event) {
-    const value = event.target.value;
-    setTagSearch(value);
+  // function handleTagSearchChange(event) {
+  //   const value = event.target.value;
+  //   setTagSearch(value);
 
-    if (value.trim().length < 2) {
-      setAvailableTags([]);
-      setLoadingTags(false);
-      setTagError("");
-    }
-  }
+  //   if (value.trim().length < 2) {
+  //     setAvailableTags([]);
+  //     setLoadingTags(false);
+  //     setTagError("");
+  //   }
+  // }
 
   function toggleTag(tagName) {
     setDraftFilters((current) => ({
