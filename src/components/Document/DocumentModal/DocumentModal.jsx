@@ -12,6 +12,7 @@ import {
   FiFile,
   FiEdit3,
 } from "react-icons/fi";
+import { formatarSetor } from "../../../utils/documentFormatters";
 import "./DocumentModal.css";
 
 function formatDate(value) {
@@ -121,7 +122,7 @@ function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }
             </div>
             <div className="stat-info">
               <span className="stat-label">Setor</span>
-              <strong className="stat-value">{document.setor || "-"}</strong>
+              <strong className="stat-value">{formatarSetor(document)}</strong>
             </div>
           </div>
 

@@ -4,6 +4,7 @@ import api from "./api";
 
 import {
   createDocument,
+  fetchAllAvailableTags,
   fetchDocumentById,
   fetchDocuments,
   fetchTags,
@@ -21,7 +22,7 @@ describe("fetchDocuments", () => {
     vi.clearAllMocks();
   });
 
-  it("busca documentos por nome, etiqueta e contexto", async () => {
+  it("busca documentos por nome e contexto", async () => {
     const responseData = {
       pages: 1,
       results: [
@@ -48,9 +49,8 @@ describe("fetchDocuments", () => {
     expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
       params: {
         nome: "manual",
-        etiquetas: "manual",
-        page: 1,
         contexto: "manual",
+        page: 1,
       },
     });
   });
@@ -75,14 +75,12 @@ describe("fetchDocuments", () => {
 
     expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
       params: {
-        nome: "",
-        etiquetas: "",
         page: 1,
       },
     });
   });
 
-  it("envia os filtros de tags, tipo e data de atualização", async () => {
+  it("envia os filtros de etiquetas, setor e data de atualização", async () => {
     const responseData = {
       pages: 1,
       results: [],
@@ -97,19 +95,17 @@ describe("fetchDocuments", () => {
         nome: "",
         contexto: "",
         page: 1,
-        tags: [1, 2],
-        tipo: ["Técnico", "Normativo"],
+        etiquetas: "seguranca redes",
+        setor: "Técnico, Normativo",
         data_atualizacao: "2026-10-01",
       })
     ).resolves.toEqual(responseData);
 
     expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
       params: {
-        nome: "",
-        etiquetas: "",
         page: 1,
-        tags: [1, 2],
-        tipo: ["Técnico", "Normativo"],
+        etiquetas: "seguranca redes",
+        setor: "Técnico, Normativo",
         data_atualizacao: "2026-10-01",
       },
     });
@@ -130,8 +126,8 @@ describe("fetchDocuments", () => {
         nome: "documento",
         contexto: "documento",
         page: 1,
-        tags: [],
-        tipo: [],
+        etiquetas: "",
+        setor: "",
         data_atualizacao: "",
       })
     ).resolves.toEqual(responseData);
@@ -139,7 +135,6 @@ describe("fetchDocuments", () => {
     expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
       params: {
         nome: "documento",
-        etiquetas: "documento",
         page: 1,
         contexto: "documento",
       },
@@ -160,8 +155,6 @@ describe("fetchDocuments", () => {
 
     expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
       params: {
-        nome: "",
-        etiquetas: "",
         page: 1,
       },
     });
@@ -182,8 +175,8 @@ describe("fetchDocuments", () => {
         nome: "LGPD",
         contexto: "LGPD",
         page: 1,
-        tags: [10],
-        tipo: ["Normativo"],
+        etiquetas: "Normativo",
+        setor: "Normativo",
         data_atualizacao: "2026-09-30",
       })
     ).resolves.toEqual(responseData);
@@ -191,11 +184,10 @@ describe("fetchDocuments", () => {
     expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
       params: {
         nome: "LGPD",
-        etiquetas: "LGPD",
         page: 1,
         contexto: "LGPD",
-        tags: [10],
-        tipo: ["Normativo"],
+        etiquetas: "Normativo",
+        setor: "Normativo",
         data_atualizacao: "2026-09-30",
       },
     });
@@ -218,6 +210,88 @@ describe("fetchDocuments", () => {
     });
 
     await expect(fetchDocuments()).resolves.toEqual(responseData);
+  });
+
+  describe("critérios de aceitação da A6-36 / US-4", () => {
+    it("não envia data_atualizacao quando a data estiver vazia", async () => {
+      api.get.mockResolvedValue({ data: { results: [], pages: 1 } });
+
+      await fetchDocuments({
+        data_atualizacao: "",
+      });
+
+      expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
+        params: { page: 1 },
+      });
+      expect(api.get.mock.calls[0][1].params.data_atualizacao).toBeUndefined();
+    });
+
+    it("não envia etiquetas quando nenhuma etiqueta for selecionada (string vazia ou array vazio)", async () => {
+      api.get.mockResolvedValue({ data: { results: [], pages: 1 } });
+
+      await fetchDocuments({
+        etiquetas: "",
+        tags: [],
+      });
+
+      expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
+        params: { page: 1 },
+      });
+      expect(api.get.mock.calls[0][1].params.etiquetas).toBeUndefined();
+    });
+
+    it("envia os nomes das etiquetas selecionadas no painel de filtros", async () => {
+      api.get.mockResolvedValue({ data: { results: [], pages: 1 } });
+
+      await fetchDocuments({
+        tags: ["Qualitativo", "Normativo"],
+      });
+
+      expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
+        params: {
+          etiquetas: "Qualitativo Normativo",
+          page: 1,
+        },
+      });
+    });
+
+    it("não envia setor quando o campo estiver vazio (string vazia ou array vazio)", async () => {
+      api.get.mockResolvedValue({ data: { results: [], pages: 1 } });
+
+      await fetchDocuments({
+        setor: "",
+        tipo: [],
+      });
+
+      expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
+        params: { page: 1 },
+      });
+      expect(api.get.mock.calls[0][1].params.setor).toBeUndefined();
+    });
+
+    it("formata etiquetas como string separada por espaço e setor separado por vírgula", async () => {
+      api.get.mockResolvedValue({ data: { results: [], pages: 1 } });
+
+      await fetchDocuments({
+        nome: "Contrato",
+        contexto: "Cláusula rescisória",
+        page: 2,
+        etiquetas: [{ nome: "juridico" }, { nome: "urgente" }],
+        setor: ["Técnico", "Jurídico"],
+        data_atualizacao: "2026-05-10",
+      });
+
+      expect(api.get).toHaveBeenCalledWith("/api/documentos/", {
+        params: {
+          nome: "Contrato",
+          contexto: "Cláusula rescisória",
+          page: 2,
+          etiquetas: "juridico urgente",
+          setor: "Técnico, Jurídico",
+          data_atualizacao: "2026-05-10",
+        },
+      });
+    });
   });
 });
 
@@ -331,6 +405,26 @@ describe("fetchTags", () => {
         busca: "LGPD",
       },
     });
+  });
+});
+
+describe("fetchAllAvailableTags", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("busca todas as etiquetas sem filtro na rota /api/etiquetas/", async () => {
+    const responseData = [
+      { id_etiqueta: 1, nome: "juridico" },
+      { id_etiqueta: 2, nome: "normativo" },
+    ];
+
+    api.get.mockResolvedValue({
+      data: responseData,
+    });
+
+    await expect(fetchAllAvailableTags()).resolves.toEqual(responseData);
+    expect(api.get).toHaveBeenCalledWith("/api/etiquetas/");
   });
 });
 

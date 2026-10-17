@@ -1,4 +1,3 @@
-
 .filter-overlay {
   position: fixed;
   inset: 0;
@@ -127,6 +126,13 @@
   font-size: 13px;
 }
 
+.filter-selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
 .filter-options {
   display: flex;
   flex-direction: column;
@@ -155,6 +161,106 @@
   margin: 1px 0 0;
   accent-color: #2563eb;
   cursor: pointer;
+}
+
+.filter-multiselect {
+  position: relative;
+}
+
+.filter-multiselect {
+  position: relative;
+  width: 100%;
+}
+
+.filter-multiselect-trigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.filter-multiselect-trigger:hover,
+.filter-multiselect-trigger:focus-within {
+  border-color: #2563eb;
+}
+
+.filter-multiselect-values {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 5px 0 5px 12px;
+}
+
+.filter-multiselect-placeholder {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.filter-selection-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 7px 0 9px;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  background: #eef2ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.filter-selection-chip button,
+.filter-multiselect-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.filter-selection-chip button {
+  width: 16px;
+  height: 16px;
+}
+
+.filter-multiselect-toggle {
+  align-self: stretch;
+  width: 38px;
+  color: #94a3b8;
+}
+
+.filter-selection-chip button:focus-visible,
+.filter-multiselect-toggle:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.filter-multiselect-options {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 0;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
 }
 
 .filter-date-input {

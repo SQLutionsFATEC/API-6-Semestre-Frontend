@@ -17,6 +17,12 @@ import {
 
 import "./Home.css";
 
+const EMPTY_FILTERS = {
+  tags: [],
+  tipo: [],
+  data_atualizacao: "",
+};
+
 const MOCK_CURRENT_USER = {
   name: "Chico Soluções",
   email: "ChicoLutions@gmail.com",
@@ -24,14 +30,9 @@ const MOCK_CURRENT_USER = {
   level: "Nível 1",
 };
 
-const EMPTY_FILTERS = {
-  tags: [],
-  tipo: [],
-  data_atualizacao: "",
-};
-
 function Home({ documentsRefreshKey = 0 }) {
   const [search, setSearch] = useState("");
+  const [searchMode, setSearchMode] = useState("nome");
   const [documents, setDocuments] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,6 +41,10 @@ function Home({ documentsRefreshKey = 0 }) {
 
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
+  const activeFiltersCount =
+    filters.tags.length +
+    filters.tipo.length +
+    (filters.data_atualizacao ? 1 : 0);
 
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [viewerDocument, setViewerDocument] = useState(null);
@@ -66,14 +71,27 @@ function Home({ documentsRefreshKey = 0 }) {
       setError(null);
 
       try {
-        const data = await fetchDocuments({
-          nome: search,
-          contexto: search,
+        const queryParams = {
+          nome: "",
+          contexto: "",
           page: currentPage,
           tags: filters.tags,
           tipo: filters.tipo,
           data_atualizacao: filters.data_atualizacao,
-        });
+        };
+
+        const trimmedSearch = search.trim();
+        if (trimmedSearch !== "") {
+          if (searchMode === "nome") {
+            queryParams.nome = trimmedSearch;
+          } else if (searchMode === "tags") {
+            queryParams.etiquetas = trimmedSearch;
+          } else if (searchMode === "conteudo") {
+            queryParams.contexto = trimmedSearch;
+          }
+        }
+
+        const data = await fetchDocuments(queryParams);
 
         if (cancelled) return;
 
@@ -99,6 +117,7 @@ function Home({ documentsRefreshKey = 0 }) {
     };
   }, [
     search,
+    searchMode,
     currentPage,
     filters.tags,
     filters.tipo,
@@ -108,6 +127,11 @@ function Home({ documentsRefreshKey = 0 }) {
 
   function handleSearch(value) {
     setSearch(value);
+    setCurrentPage(1);
+  }
+
+  function handleSearchModeChange(mode) {
+    setSearchMode(mode);
     setCurrentPage(1);
   }
 
@@ -124,6 +148,15 @@ function Home({ documentsRefreshKey = 0 }) {
     });
     setCurrentPage(1);
     setIsFilterSidebarOpen(false);
+  }
+
+  function handleClearFilters() {
+    setFilters({
+      tags: [],
+      tipo: [],
+      data_atualizacao: "",
+    });
+    setCurrentPage(1);
   }
 
   function handleViewPdf(document) {
@@ -193,7 +226,6 @@ function Home({ documentsRefreshKey = 0 }) {
       );
     }
   }
-
   function handleUserUpdated(updatedUser) {
     setCurrentUser((prev) => ({ ...prev, ...updatedUser }));
   }
@@ -212,19 +244,33 @@ function Home({ documentsRefreshKey = 0 }) {
         </div>
 
         <div className="header-actions">
-          <SearchBar value={search} onChange={handleSearch} />
+          <SearchBar
+            value={search}
+            onChange={handleSearch}
+            searchMode={searchMode}
+            onModeChange={handleSearchModeChange}
+          />
 
           <button
             type="button"
-            className="filter-button"
+            className={`filter-button${activeFiltersCount > 0 ? " filter-button-active" : ""}`}
             aria-haspopup="dialog"
             aria-expanded={isFilterSidebarOpen}
+            aria-label={
+              activeFiltersCount > 0
+                ? `Filtros: ${activeFiltersCount} ativo${activeFiltersCount > 1 ? "s" : ""}`
+                : "Filtros"
+            }
             onClick={() => setIsFilterSidebarOpen(true)}
           >
             <FiFilter size={15} aria-hidden="true" />
             Filtros
+            {activeFiltersCount > 0 && (
+              <span className="filter-active-indicator" aria-hidden="true">
+                {activeFiltersCount}
+              </span>
+            )}
           </button>
-
           <button
             type="button"
             className="user-trigger"
@@ -273,6 +319,7 @@ function Home({ documentsRefreshKey = 0 }) {
         filters={filters}
         onClose={handleCloseFilters}
         onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
       />
 
       <DocumentModal
