@@ -63,6 +63,8 @@ jobs:
       - name: Verify coverage report
         run: |
           test -f coverage/lcov.info
+          sed -i 's#\\#/#g' coverage/lcov.info
+          test -s coverage/lcov.info
           echo "LCOV coverage report generated successfully."
           ls -lh coverage/lcov.info
 
