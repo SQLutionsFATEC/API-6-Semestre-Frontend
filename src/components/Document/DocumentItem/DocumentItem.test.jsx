@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import DocumentItem from "./DocumentItem";
+import { formatarSetor } from "../../../utils/documentFormatters";
 
 const documentData = {
   id_documento: 1,
@@ -51,6 +52,35 @@ describe("DocumentItem", () => {
     );
 
     expect(screen.getByText("data-invalida")).toBeInTheDocument();
+  });
+
+  it("formata os setores de acordo com os slugs técnicos e etiquetas", () => {
+    expect(formatarSetor({ setor: "tecnico" })).toBe("Técnico");
+    expect(formatarSetor({ setor: "normativo" })).toBe("Normativo");
+    expect(formatarSetor({ setor: "juridico" })).toBe("Jurídico");
+    expect(formatarSetor({ setor: "qualitativo" })).toBe("Qualitativo");
+
+    // Mantém caso já esteja formatado
+    expect(formatarSetor({ setor: "Técnico" })).toBe("Técnico");
+
+    // Fallback para etiquetas quando setor estiver ausente
+    expect(
+      formatarSetor({ setor: "", etiquetas: [{ nome: "juridico" }] })
+    ).toBe("Jurídico");
+    expect(
+      formatarSetor({ setor: null, etiquetas: ["normativo"] })
+    ).toBe("Normativo");
+  });
+
+  it("exibe o setor formatado na coluna do item", () => {
+    render(
+      <DocumentItem
+        document={{ ...documentData, setor: "juridico" }}
+        onView={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Jurídico")).toBeInTheDocument();
   });
 
   it("gera as classes css a partir do setor e do nivel", () => {

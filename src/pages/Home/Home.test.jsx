@@ -10,6 +10,8 @@ import {
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
   fetchDocumentById: vi.fn(),
+  fetchAllAvailableTags: vi.fn(),
+  fetchTags: vi.fn(),
 }));
 
 vi.mock("pdfjs-dist", () => ({
@@ -155,20 +157,62 @@ describe("Home", () => {
       expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByPlaceholderText("Pesquisar documentos..."), {
+    fireEvent.change(screen.getByPlaceholderText("Pesquise por nome, tag, conteúdo ou autor..."), {
       target: { value: "manual" },
     });
 
     await waitFor(() => {
       expect(fetchDocuments).toHaveBeenLastCalledWith({
         nome: "manual",
-        contexto: "manual",
+        contexto: "",
         page: 1,
         tags: [],
         tipo: [],
         data_atualizacao: "",
       });
     });
+  });
+
+  it("indica no botão quando há filtros ativos", async () => {
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Selecionar setor/tipo" })
+    );
+    fireEvent.click(screen.getByLabelText("Técnico"));
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
+
+    expect(
+      screen.getByRole("button", { name: "Filtros: 1 ativo" })
+    ).toBeInTheDocument();
+  });
+
+  it("mantém o painel aberto ao limpar os filtros", async () => {
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Selecionar setor/tipo" })
+    );
+    fireEvent.click(screen.getByLabelText("Técnico"));
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtros: 1 ativo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Selecionar setor/tipo" })
+    ).toBeInTheDocument();
   });
 
   it("muda de pagina pela paginacao", async () => {

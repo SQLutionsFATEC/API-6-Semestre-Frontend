@@ -15,13 +15,24 @@ const MOCK_USER = {
   level: "Nível 1",
 };
 
-function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted }) {
+function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen }) {
   const [mode, setMode] = useState("view");
-  const [formData, setFormData] = useState(() => ({
-    name: user.name,
-    email: user.email,
-  }));
+  const [formData, setFormData] = useState({ name: user?.name ?? "", email: user?.email ?? "" });
   const [errors, setErrors] = useState({});
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  const [prevUser, setPrevUser] = useState(user);
+
+  if (isOpen !== prevIsOpen || user !== prevUser) {
+    setPrevIsOpen(isOpen);
+    setPrevUser(user);
+    if (isOpen) {
+      setMode("view");
+      setFormData({ name: user?.name ?? "", email: user?.email ?? "" });
+      setErrors({});
+    }
+  }
+
+  if (!isOpen) return null;
 
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
@@ -227,6 +238,7 @@ function UserModal({
     <UserModalContent
       key={`${user.name}-${user.email}`}
       onClose={onClose}
+      isOpen={isOpen}
       user={user}
       onUserUpdated={onUserUpdated}
       onUserDeleted={onUserDeleted}

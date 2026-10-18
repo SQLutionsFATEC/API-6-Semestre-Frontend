@@ -30,13 +30,13 @@ vi.mock("../../components/SearchBar/SearchBar", () => ({
 }));
 
 vi.mock("../../components/Document/DocumentList/DocumentList", () => ({
-  default: ({ documents = [], onOpenDetails }) => (
+  default: ({ documents = [], onView, onOpenDetails }) => (
     <div data-testid="document-list">
       {documents.map((document) => (
         <button
           key={document.id_documento}
           type="button"
-          onClick={() => onOpenDetails(document)}
+          onClick={() => (onOpenDetails || onView)(document)}
         >
           {document.nome}
         </button>
@@ -72,7 +72,7 @@ vi.mock("../../components/Pagination/Pagination", () => ({
 }));
 
 vi.mock("../../components/FilterSidebar/FilterSidebar", () => ({
-  default: ({ isOpen, filters, onClose, onApplyFilters }) => {
+  default: ({ isOpen, filters, onClose, onApplyFilters, onClearFilters }) => {
     if (!isOpen) {
       return null;
     }
@@ -103,7 +103,7 @@ vi.mock("../../components/FilterSidebar/FilterSidebar", () => ({
         <button
           type="button"
           onClick={() =>
-            onApplyFilters({
+            onClearFilters({
               tags: [],
               tipo: [],
               data_atualizacao: "",
@@ -195,8 +195,7 @@ async function flushPromises() {
 function openFilterSidebar() {
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Filtros",
-      exact: true,
+      name: /Filtros/,
     })
   );
 }
@@ -272,7 +271,7 @@ describe("Home", () => {
 
     expect(fetchDocuments).toHaveBeenLastCalledWith({
       nome: "LGPD",
-      contexto: "LGPD",
+      contexto: "",
       page: 1,
       ...emptyFilters,
     });
@@ -297,9 +296,7 @@ describe("Home", () => {
       screen.getByRole("button", { name: "Fechar filtros" })
     );
 
-    expect(
-      screen.queryByTestId("filter-sidebar")
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("filter-sidebar")).not.toBeInTheDocument();
   });
 
   it("aplica filtros e reinicia a paginação para a página 1", async () => {
@@ -323,9 +320,7 @@ describe("Home", () => {
       })
     );
 
-    expect(
-      screen.queryByTestId("filter-sidebar")
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("filter-sidebar")).not.toBeInTheDocument();
 
     await advanceSearchDebounce();
 
@@ -362,7 +357,7 @@ describe("Home", () => {
 
     expect(fetchDocuments).toHaveBeenLastCalledWith({
       nome: "LGPD",
-      contexto: "LGPD",
+      contexto: "",
       page: 1,
       ...selectedFilters,
     });
@@ -401,7 +396,7 @@ describe("Home", () => {
 
     expect(fetchDocuments).toHaveBeenLastCalledWith({
       nome: "Contrato",
-      contexto: "Contrato",
+      contexto: "",
       page: 1,
       ...emptyFilters,
     });
@@ -410,9 +405,7 @@ describe("Home", () => {
       screen.getByRole("textbox", { name: "Pesquisar" })
     ).toHaveValue("Contrato");
 
-    expect(
-      screen.queryByTestId("filter-sidebar")
-    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("filter-sidebar")).toBeInTheDocument();
   });
 
   it("exibe os documentos retornados pela API", async () => {

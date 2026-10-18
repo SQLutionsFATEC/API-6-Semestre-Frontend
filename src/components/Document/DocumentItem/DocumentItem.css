@@ -77,22 +77,37 @@
   text-align: center;
 }
 
-/* Técnico */
+/* Técnico (Azul) */
 .type-técnico,
 .type-tecnico {
   background-color: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
 }
 
-/* Normativo */
+/* Normativo (Roxo) */
 .type-normativo {
   background-color: #f5f3ff;
-  color: #7c3aed;
-  border: 1px solid #ede9fe;
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
 }
 
-/* Administrativo */
+/* Jurídico (Verde Esmeralda) */
+.type-jurídico,
+.type-juridico {
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+/* Qualitativo (Laranja / Âmbar) */
+.type-qualitativo {
+  background-color: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+/* Administrativo (Verde Claro) */
 .type-administrativo {
   background-color: #f0fdf4;
   color: #16a34a;
@@ -103,6 +118,9 @@
 .document-type span:not(.type-técnico,
   .type-tecnico,
   .type-normativo,
+  .type-jurídico,
+  .type-juridico,
+  .type-qualitativo,
   .type-administrativo) {
   background-color: #f8fafc;
   color: #475569;
