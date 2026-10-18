@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { FiX, FiZoomIn, FiZoomOut } from "react-icons/fi";
+import {
+  getAccessToken,
+  restartLoginAfterUnauthorized,
+} from "../../../services/keycloak";
 
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 400;
@@ -59,13 +63,33 @@ function PdfViewer({ document, onClose }) {
         if (cancelled) return;
 
         pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+        const pdfUrl = new URL(document.data, window.location.origin);
+        const apiOrigin = new URL(
+          import.meta.env.VITE_API_URL || "http://localhost:8000",
+          window.location.origin
+        ).origin;
+        const requestOptions = { url: document.data };
+
+        if (pdfUrl.origin === apiOrigin) {
+          const token = await getAccessToken();
+          requestOptions.httpHeaders = {
+            Authorization: `Bearer ${token}`,
+          };
+        }
+
         loadingTask = pdfjs.getDocument({
-          url: document.data,
+          ...requestOptions,
         });
         const loadedDocument = await loadingTask.promise;
         if (!cancelled) setPdfDocument(loadedDocument);
       } catch (loadError) {
         if (!cancelled) {
+          if (
+            loadError.status === 401 ||
+            loadError.response?.status === 401
+          ) {
+            restartLoginAfterUnauthorized();
+          }
           console.error("Erro ao carregar PDF:", loadError);
           setError("Não foi possível carregar ou exibir o documento.");
         }
