@@ -167,7 +167,7 @@ describe("DocumentItem", () => {
     expect(container.querySelector(".access-lock-icon")).toBeInTheDocument();
   });
 
-  it("chama onOpenDetails ao clicar no botão de cadeado de um documento restrito", () => {
+  it("chama onView sem abrir detalhes ao clicar no botão de um documento restrito", () => {
     const onOpenDetails = vi.fn();
     const onView = vi.fn();
     const restrictedDoc = {
@@ -184,7 +184,7 @@ describe("DocumentItem", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
 
-    expect(onOpenDetails).toHaveBeenCalledWith(restrictedDoc);
-    expect(onView).not.toHaveBeenCalled();
+    expect(onView).toHaveBeenCalledWith(restrictedDoc);
+    expect(onOpenDetails).not.toHaveBeenCalled();
   });
 });
