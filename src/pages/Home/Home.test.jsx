@@ -34,6 +34,11 @@ vi.mock("pdfjs-dist", () => ({
   })),
 }));
 
+vi.mock("../../services/keycloak", () => ({
+  getAccessToken: vi.fn().mockResolvedValue("access-token"),
+  restartLoginAfterUnauthorized: vi.fn(),
+}));
+
 const documentsPage = {
   results: [
     {
@@ -285,6 +290,7 @@ describe("Home", () => {
     const pdfjs = await import("pdfjs-dist");
     expect(pdfjs.getDocument).toHaveBeenCalledWith({
       url: "http://localhost:8000/media/documentos/manual.pdf",
+      httpHeaders: { Authorization: "Bearer access-token" },
     });
   });
 
@@ -492,12 +498,7 @@ describe("Home", () => {
     ).toBeInTheDocument();
   });
 
-  it("ao clicar no botão de cadeado de um documento restrito, abre o modal de detalhes com o indicativo de bloqueio", async () => {
-    vi.mocked(fetchDocumentById).mockResolvedValue({
-      ...documentsPage.results[2],
-      descricao: "Documento restrito teste",
-    });
-
+  it("ao clicar em visualizar um documento restrito, não busca detalhes nem abre o PDF", async () => {
     render(<Home />);
 
     await waitFor(() => {
@@ -511,11 +512,15 @@ describe("Home", () => {
 
     fireEvent.click(restrictedButton);
 
-    await waitFor(() => {
-      expect(getModal()).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("Acesso Bloqueado")).toBeInTheDocument();
+    expect(fetchDocumentById).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("heading", { name: "Acesso Restrito" })
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", {
+        name: /Plano Militar Confidencial\.pdf/,
+      })
+    ).not.toBeInTheDocument();
   });
 
   it("ao tentar visualizar documento restrito pelo modal de detalhes, exibe o modal de acesso restrito e não abre o link", async () => {
