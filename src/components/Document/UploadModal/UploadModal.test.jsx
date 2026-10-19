@@ -286,4 +286,57 @@ describe("UploadModal", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/Nome do documento/i).value).toBe("");
   });
+
+  it("cobre falha na API sem detalhes (fallback genérico de erro)", async () => {
+    const mockCreate = vi.fn().mockRejectedValue({ message: "" });
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+
+    render(
+      <UploadModal isOpen={true} onClose={vi.fn()} createDocumentFn={mockCreate} />
+    );
+
+    const fileInput = document.querySelector(".upload-file-input");
+    fireEvent.change(fileInput, {
+      target: { files: [new File(["pdf"], "doc.pdf", { type: "application/pdf" })] },
+    });
+    fireEvent.change(screen.getByLabelText(/Setor responsável/i), {
+      target: { value: "Técnico" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith("Não foi possível cadastrar o documento.");
+    });
+    alertSpy.mockRestore();
+  });
+
+  it("fecha o modal pelo X na tela de sucesso e cobre clique fora na mesma tela", async () => {
+    const handleClose = vi.fn();
+    const { container } = render(
+      <UploadModal
+        isOpen={true}
+        onClose={handleClose}
+        createDocumentFn={vi.fn().mockResolvedValue({ id_documento: 1 })}
+      />
+    );
+
+    fireEvent.change(document.querySelector(".upload-file-input"), {
+      target: { files: [new File(["pdf"], "doc.pdf", { type: "application/pdf" })] },
+    });
+    fireEvent.change(screen.getByLabelText(/Setor responsável/i), {
+      target: { value: "Técnico" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
+
+    await screen.findByText("Documento cadastrado com sucesso!");
+
+    const overlay = container.querySelector(".upload-modal-overlay");
+    fireEvent.click(overlay);
+    expect(handleClose).toHaveBeenCalledTimes(1);
+
+    const closeBtn = screen.getByRole("button", { name: "Fechar" });
+    fireEvent.click(closeBtn);
+    expect(handleClose).toHaveBeenCalledTimes(2);
+  });
 });
