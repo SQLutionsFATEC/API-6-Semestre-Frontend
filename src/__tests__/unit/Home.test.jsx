@@ -17,6 +17,7 @@ import {
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
   fetchDocumentById: vi.fn(),
+  createDocument: vi.fn(),
 }));
 
 vi.mock("../../components/SearchBar/SearchBar", () => ({
