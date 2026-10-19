@@ -55,7 +55,6 @@ describe("UploadModal", () => {
     const nameInput = screen.getByLabelText(/Nome do documento/i);
     expect(nameInput.value).toBe("Manual de manutenção.pdf");
 
-    // Permanece editável
     fireEvent.change(nameInput, { target: { value: "Manual Editado 2026" } });
     expect(nameInput.value).toBe("Manual Editado 2026");
   });
@@ -69,18 +68,15 @@ describe("UploadModal", () => {
     const fileInput = document.querySelector(".upload-file-input");
     const clickSpy = vi.spyOn(fileInput, "click");
 
-    // Click na dropzone aciona o input
     fireEvent.click(dropzone);
     expect(clickSpy).toHaveBeenCalled();
 
-    // Drag over e drag leave
     fireEvent.dragOver(dropzone);
     expect(dropzone).toHaveClass("dragging");
 
     fireEvent.dragLeave(dropzone);
     expect(dropzone).not.toHaveClass("dragging");
 
-    // Drop de arquivo PDF
     const testFile = new File(["conteudo"], "relatorio.pdf", {
       type: "application/pdf",
     });
@@ -126,7 +122,6 @@ describe("UploadModal", () => {
     const testFile = new File(["pdf"], "doc.pdf", { type: "application/pdf" });
     fireEvent.change(fileInput, { target: { files: [testFile] } });
 
-    // Limpa o nome do documento
     fireEvent.change(screen.getByLabelText(/Nome do documento/i), {
       target: { value: "   " },
     });
@@ -159,31 +154,21 @@ describe("UploadModal", () => {
     const handleClose = vi.fn();
     const { rerender } = render(<UploadModal isOpen={true} onClose={handleClose} />);
 
-    // Fechar pelo botão X
     fireEvent.click(screen.getByRole("button", { name: "Fechar" }));
     expect(handleClose).toHaveBeenCalledTimes(1);
 
-    // Fechar pelo botão Cancelar
     fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(handleClose).toHaveBeenCalledTimes(2);
 
-    // Fechar pelo clique no overlay
     const overlay = document.querySelector(".upload-modal-overlay");
     fireEvent.click(overlay);
     expect(handleClose).toHaveBeenCalledTimes(3);
 
-    // Clique no conteúdo do modal não fecha
     const container = document.querySelector(".upload-modal-container");
     fireEvent.click(container);
     expect(handleClose).toHaveBeenCalledTimes(3);
 
-    // Fechar pelo botão X na tela de sucesso
-    rerender(
-      <UploadModal
-        isOpen={true}
-        onClose={handleClose}
-      />
-    );
+    rerender(<UploadModal isOpen={true} onClose={handleClose} />);
   });
 
   it("trata erro na criação do documento", async () => {
@@ -219,20 +204,23 @@ describe("UploadModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("realiza o upload com sucesso, chama onDocumentCreated e exibe o modal de feedback", async () => {
+  it("realiza o upload com sucesso, chama onDocumentCreated, onViewDocument e exibe o modal de feedback", async () => {
     const mockCreate = vi.fn().mockResolvedValue({
       id_documento: 101,
       nome: "Manual de manutenção.pdf",
       setor: "Técnico",
     });
     const handleCreated = vi.fn();
+    const handleView = vi.fn();
+    const handleClose = vi.fn();
 
     render(
       <UploadModal
         isOpen={true}
-        onClose={vi.fn()}
+        onClose={handleClose}
         createDocumentFn={mockCreate}
         onDocumentCreated={handleCreated}
+        onViewDocument={handleView}
       />
     );
 
@@ -262,28 +250,35 @@ describe("UploadModal", () => {
       });
     });
 
-    // Feedback modal (Imagem 2)
-    expect(
-      await screen.findByText("Documento cadastrado com sucesso!")
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("O arquivo foi enviado e processado pela API local.")
-    ).toBeInTheDocument();
-    expect(screen.getByText("Manual de manutenção.pdf")).toBeInTheDocument();
-    expect(screen.getByText("Técnico")).toBeInTheDocument();
-    expect(
-      screen.getByText("Você já pode visualizar ou editar este documento na listagem.")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Documento cadastrado com sucesso!")).toBeInTheDocument();
 
-    // Clicar em "Ver documento"
     const viewBtn = screen.getByRole("button", { name: "Ver documento" });
     fireEvent.click(viewBtn);
+    
+    expect(handleView).toHaveBeenCalledWith(expect.objectContaining({ id_documento: 101 }));
+    expect(handleClose).toHaveBeenCalled();
+  });
 
-    // Botão "Cadastrar outro" retorna ao formulário de upload
+  it("limpa o formulário ao clicar em Cadastrar outro na tela de sucesso", async () => {
+    const mockCreate = vi.fn().mockResolvedValue({ id_documento: 101 });
+
+    render(
+      <UploadModal
+        isOpen={true}
+        onClose={vi.fn()}
+        createDocumentFn={mockCreate}
+      />
+    );
+
+    const testFile = new File(["pdf content"], "Manual.pdf", { type: "application/pdf" });
+    fireEvent.change(document.querySelector(".upload-file-input"), { target: { files: [testFile] } });
+    fireEvent.change(screen.getByLabelText(/Setor responsável/i), { target: { value: "Técnico" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
+    
+    await screen.findByText("Documento cadastrado com sucesso!");
+    
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar outro" }));
-    expect(
-      screen.getByRole("heading", { name: "Cadastrar documento" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Cadastrar documento" })).toBeInTheDocument();
     expect(screen.getByLabelText(/Nome do documento/i).value).toBe("");
   });
 

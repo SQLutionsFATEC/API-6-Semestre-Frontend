@@ -15,6 +15,7 @@ function UploadModal({
   onClose,
   createDocumentFn = createDocument,
   onDocumentCreated,
+  onViewDocument,
 }) {
   const SETORES = [
     "Técnico",
@@ -28,7 +29,6 @@ function UploadModal({
     "Comercial",
     "Militar",
   ];
-
   const INITIAL_FORM = {
     name: "",
     sector: "",
@@ -40,7 +40,7 @@ function UploadModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
-  const [createdInfo, setCreatedInfo] = useState({ fileName: "", sector: "" });
+  const [createdInfo, setCreatedInfo] = useState({ fileName: "", sector: "", document: null });
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -51,6 +51,7 @@ function UploadModal({
     setIsSuccess(false);
     setIsDragging(false);
     setIsSubmitting(false);
+    setCreatedInfo({ fileName: "", sector: "", document: null });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -122,19 +123,19 @@ function UploadModal({
       setCreatedInfo({
         fileName: file.name,
         sector: form.sector,
+        document: created,
       });
       setIsSuccess(true);
 
       if (onDocumentCreated) {
         onDocumentCreated(created);
       }
-       } catch (err) {
+    } catch (err) {
       const mensagem =
         err?.response?.data?.erro ||
         err?.response?.data?.nome?.[0] ||
         err?.response?.data?.nivel?.[0] ||
         err?.response?.data?.data?.[0] ||
-        err?.response?.data?.setor?.[0] ||
         err?.response?.data?.tipo_arquivo?.[0] ||
         err?.message ||
         "Não foi possível cadastrar o documento.";
@@ -150,14 +151,17 @@ function UploadModal({
     setFile(null);
     setError("");
     setIsSuccess(false);
+    setCreatedInfo({ fileName: "", sector: "", document: null });
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
-  // Implementar visualização do documento aqui posteriormente
   const handleViewDocument = () => {
-    console.log("Visualização do documento será integrada futuramente.");
+    if (onViewDocument && createdInfo.document) {
+      onViewDocument(createdInfo.document);
+    }
+    handleClose();
   };
 
   return (
@@ -180,7 +184,6 @@ function UploadModal({
           }}
         />
         {isSuccess ? (
-          /* Modal 2: Feedback de Sucesso */
           <div className="upload-modal-content success-view flex flex-col overflow-y-auto p-7 pb-6 relative">
             <button
               type="button"
@@ -255,7 +258,6 @@ function UploadModal({
             </div>
           </div>
         ) : (
-          /* Modal 1: Formulário de Cadastro */
           <div className="upload-modal-content flex flex-col overflow-y-auto">
             <div className="upload-modal-header px-6 py-[18px] flex items-start justify-between border-b border-slate-100 bg-slate-50">
               <div className="upload-modal-header-texts flex flex-col">
