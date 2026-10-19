@@ -1,12 +1,13 @@
-import { FiFileText, FiFilter, FiAlertCircle, FiUser } from "react-icons/fi";
-import { useEffect, useRef, useState } from "react";
+import { FiAlertCircle, FiFileText, FiFilter, FiUser } from "react-icons/fi";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import SearchBar from "../../components/SearchBar/SearchBar";
-import FilterSidebar from "../../components/FilterSidebar/FilterSidebar";
 import DocumentList from "../../components/Document/DocumentList/DocumentList";
-import Pagination from "../../components/Pagination/Pagination";
 import DocumentModal from "../../components/Document/DocumentModal/DocumentModal";
+import PdfViewer from "../../components/Document/PdfViewer/PdfViewer";
 import RestrictedModal from "../../components/Document/RestrictedModal/RestrictedModal";
+import FilterSidebar from "../../components/FilterSidebar/FilterSidebar";
+import Pagination from "../../components/Pagination/Pagination";
+import SearchBar from "../../components/SearchBar/SearchBar";
 import UserModal from "../../components/UserModal/UserModal";
 
 import {
@@ -16,6 +17,12 @@ import {
 
 import "./Home.css";
 
+const EMPTY_FILTERS = {
+  tags: [],
+  tipo: [],
+  data_atualizacao: "",
+};
+
 const MOCK_CURRENT_USER = {
   name: "Chico Soluções",
   email: "ChicoLutions@gmail.com",
@@ -23,8 +30,9 @@ const MOCK_CURRENT_USER = {
   level: "Nível 1",
 };
 
-function Home() {
+function Home({ documentsRefreshKey = 0 }) {
   const [search, setSearch] = useState("");
+  const [searchMode, setSearchMode] = useState("nome");
   const [documents, setDocuments] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,8 +41,13 @@ function Home() {
 
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
+  const activeFiltersCount =
+    filters.tags.length +
+    filters.tipo.length +
+    (filters.data_atualizacao ? 1 : 0);
 
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [viewerDocument, setViewerDocument] = useState(null);
   const [documentDetailsLoading, setDocumentDetailsLoading] = useState(false);
   const [documentDetailsError, setDocumentDetailsError] = useState(null);
   const [restrictedModalOpen, setRestrictedModalOpen] = useState(false);
@@ -46,6 +59,10 @@ function Home() {
     setIsFilterSidebarOpen(false);
   }, []);
 
+  const handleClosePdfViewer = useCallback(() => {
+    setViewerDocument(null);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -54,14 +71,27 @@ function Home() {
       setError(null);
 
       try {
-        const data = await fetchDocuments({
-          nome: search,
-          contexto: search,
+        const queryParams = {
+          nome: "",
+          contexto: "",
           page: currentPage,
           tags: filters.tags,
           tipo: filters.tipo,
           data_atualizacao: filters.data_atualizacao,
-        });
+        };
+
+        const trimmedSearch = search.trim();
+        if (trimmedSearch !== "") {
+          if (searchMode === "nome") {
+            queryParams.nome = trimmedSearch;
+          } else if (searchMode === "tags") {
+            queryParams.etiquetas = trimmedSearch;
+          } else if (searchMode === "conteudo") {
+            queryParams.contexto = trimmedSearch;
+          }
+        }
+
+        const data = await fetchDocuments(queryParams);
 
         if (cancelled) return;
 
@@ -87,14 +117,21 @@ function Home() {
     };
   }, [
     search,
+    searchMode,
     currentPage,
     filters.tags,
     filters.tipo,
     filters.data_atualizacao,
+    documentsRefreshKey,
   ]);
 
   function handleSearch(value) {
     setSearch(value);
+    setCurrentPage(1);
+  }
+
+  function handleSearchModeChange(mode) {
+    setSearchMode(mode);
     setCurrentPage(1);
   }
 
@@ -120,7 +157,6 @@ function Home() {
       data_atualizacao: "",
     });
     setCurrentPage(1);
-    setIsFilterSidebarOpen(false);
   }
 
   function handleViewPdf(document) {
@@ -130,7 +166,7 @@ function Home() {
     }
 
     if (document.data) {
-      window.open(document.data, "_blank");
+      setViewerDocument(document);
       return;
     }
 
@@ -190,7 +226,6 @@ function Home() {
       );
     }
   }
-
   function handleUserUpdated(updatedUser) {
     setCurrentUser((prev) => ({ ...prev, ...updatedUser }));
   }
@@ -209,19 +244,33 @@ function Home() {
         </div>
 
         <div className="header-actions">
-          <SearchBar value={search} onChange={handleSearch} />
+          <SearchBar
+            value={search}
+            onChange={handleSearch}
+            searchMode={searchMode}
+            onModeChange={handleSearchModeChange}
+          />
 
           <button
             type="button"
-            className="filter-button"
+            className={`filter-button${activeFiltersCount > 0 ? " filter-button-active" : ""}`}
             aria-haspopup="dialog"
             aria-expanded={isFilterSidebarOpen}
+            aria-label={
+              activeFiltersCount > 0
+                ? `Filtros: ${activeFiltersCount} ativo${activeFiltersCount > 1 ? "s" : ""}`
+                : "Filtros"
+            }
             onClick={() => setIsFilterSidebarOpen(true)}
           >
             <FiFilter size={15} aria-hidden="true" />
             Filtros
+            {activeFiltersCount > 0 && (
+              <span className="filter-active-indicator" aria-hidden="true">
+                {activeFiltersCount}
+              </span>
+            )}
           </button>
-
           <button
             type="button"
             className="user-trigger"
@@ -270,6 +319,7 @@ function Home() {
         filters={filters}
         onClose={handleCloseFilters}
         onApplyFilters={handleApplyFilters}
+        onClearFilters={handleClearFilters}
       />
 
       <DocumentModal
@@ -284,6 +334,12 @@ function Home() {
       <RestrictedModal
         isOpen={restrictedModalOpen}
         onClose={() => setRestrictedModalOpen(false)}
+      />
+
+      <PdfViewer
+        key={viewerDocument?.data || "closed"}
+        document={viewerDocument}
+        onClose={handleClosePdfViewer}
       />
 
       <UserModal

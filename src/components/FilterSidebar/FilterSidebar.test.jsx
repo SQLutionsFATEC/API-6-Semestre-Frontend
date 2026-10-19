@@ -1,18 +1,17 @@
-
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import FilterSidebar from "./FilterSidebar";
-import { fetchTags } from "../../services/documentService";
+import { fetchAllAvailableTags } from "../../services/documentService";
 
 vi.mock("../../services/documentService", () => ({
-  fetchTags: vi.fn(),
+  fetchAllAvailableTags: vi.fn(),
 }));
 
 describe("FilterSidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(fetchTags).mockResolvedValue([]);
+    vi.mocked(fetchAllAvailableTags).mockResolvedValue([]);
   });
 
   function renderSidebar(props = {}) {
@@ -21,6 +20,7 @@ describe("FilterSidebar", () => {
         isOpen
         onClose={vi.fn()}
         onApplyFilters={vi.fn()}
+        onClearFilters={vi.fn()}
         {...props}
       />
     );
@@ -42,29 +42,51 @@ describe("FilterSidebar", () => {
     expect(screen.getByLabelText("Atualizado em")).toBeInTheDocument();
   });
 
-  it("renderiza os quatro tipos disponíveis", () => {
+  it("não exibe as opções de etiquetas quando a busca está vazia", async () => {
+    vi.mocked(fetchAllAvailableTags).mockResolvedValue([
+      { id_etiqueta: 1, nome: "Segurança" },
+      { id_etiqueta: 2, nome: "Redes" },
+    ]);
+
     renderSidebar();
+
+    expect(screen.queryByLabelText("Segurança")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Redes")).not.toBeInTheDocument();
+  });
+
+  it("exibe os tipos ao abrir o multiselect", () => {
+    renderSidebar();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Selecionar setor/tipo" })
+    );
 
     expect(screen.getByLabelText("Técnico")).toBeInTheDocument();
     expect(screen.getByLabelText("Normativo")).toBeInTheDocument();
-    expect(screen.getByLabelText("Judiciário")).toBeInTheDocument();
+    expect(screen.getByLabelText("Jurídico")).toBeInTheDocument();
     expect(screen.getByLabelText("Qualitativo")).toBeInTheDocument();
   });
 
-  it("não consulta etiquetas com menos de dois caracteres", async () => {
+  it("filtra as etiquetas enquanto a pessoa digita", async () => {
+    vi.mocked(fetchAllAvailableTags).mockResolvedValue([
+      { id_etiqueta: 1, nome: "Segurança" },
+      { id_etiqueta: 2, nome: "Redes" },
+    ]);
+
     renderSidebar();
 
+    expect(screen.queryByText("Segurança")).not.toBeInTheDocument();
+
     fireEvent.change(screen.getByLabelText("Pesquisar etiquetas"), {
-      target: { value: "a" },
+      target: { value: "red" },
     });
 
-    await waitFor(() => {
-      expect(fetchTags).not.toHaveBeenCalled();
-    });
+    expect(await screen.findByText("Redes")).toBeInTheDocument();
+    expect(screen.queryByText("Segurança")).not.toBeInTheDocument();
   });
 
-  it("busca etiquetas quando a pesquisa tem pelo menos dois caracteres", async () => {
-    vi.mocked(fetchTags).mockResolvedValue([
+  it("permite selecionar múltiplas etiquetas pesquisando", async () => {
+    vi.mocked(fetchAllAvailableTags).mockResolvedValue([
       { id_etiqueta: 1, nome: "Segurança" },
       { id_etiqueta: 2, nome: "Redes" },
     ]);
@@ -72,47 +94,64 @@ describe("FilterSidebar", () => {
     renderSidebar();
 
     fireEvent.change(screen.getByLabelText("Pesquisar etiquetas"), {
-      target: { value: "se" },
+      target: { value: "seg" },
     });
-
-    expect(await screen.findByText("Segurança")).toBeInTheDocument();
-    expect(screen.getByText("Redes")).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(fetchTags).toHaveBeenCalledWith("se");
-    });
-  });
-
-  it("permite selecionar múltiplas etiquetas", async () => {
-    vi.mocked(fetchTags).mockResolvedValue([
-      { id_etiqueta: 1, nome: "Segurança" },
-      { id_etiqueta: 2, nome: "Redes" },
-    ]);
-
-    renderSidebar();
-
-    fireEvent.change(screen.getByLabelText("Pesquisar etiquetas"), {
-      target: { value: "re" },
-    });
-
     const seguranca = await screen.findByLabelText("Segurança");
-    const redes = screen.getByLabelText("Redes");
-
     fireEvent.click(seguranca);
+
+    fireEvent.change(screen.getByLabelText("Pesquisar etiquetas"), {
+      target: { value: "red" },
+    });
+    const redes = await screen.findByLabelText("Redes");
     fireEvent.click(redes);
 
     expect(seguranca).toBeChecked();
     expect(redes).toBeChecked();
   });
 
-  it("permite selecionar múltiplos tipos", () => {
+  it("exibe e remove as etiquetas selecionadas através dos chips", () => {
+    renderSidebar({ filters: { tags: ["Segurança", "Redes"] } });
+
+    expect(screen.getByText("Segurança")).toBeInTheDocument();
+    expect(screen.getByText("Redes")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Remover etiqueta Segurança" })
+    );
+
+    expect(screen.queryByText("Segurança")).not.toBeInTheDocument();
+    expect(screen.getByText("Redes")).toBeInTheDocument();
+  });
+
+  it("permite selecionar múltiplos tipos mapeando para as tags correspondentes", () => {
     renderSidebar();
 
+    fireEvent.click(
+      screen.getByRole("button", { name: "Selecionar setor/tipo" })
+    );
     fireEvent.click(screen.getByLabelText("Técnico"));
     fireEvent.click(screen.getByLabelText("Normativo"));
 
     expect(screen.getByLabelText("Técnico")).toBeChecked();
     expect(screen.getByLabelText("Normativo")).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Remover Técnico" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Remover Normativo" })
+    ).toBeInTheDocument();
+  });
+
+  it("exibe e remove os tipos selecionados como etiquetas aceitando slugs ou nomes", () => {
+    renderSidebar({ filters: { tipo: ["tecnico", "normativo"] } });
+
+    expect(screen.getByText("Técnico")).toBeInTheDocument();
+    expect(screen.getByText("Normativo")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Remover Técnico" }));
+
+    expect(screen.queryByText("Técnico")).not.toBeInTheDocument();
+    expect(screen.getByText("Normativo")).toBeInTheDocument();
   });
 
   it("permite selecionar uma data de atualização", () => {
@@ -127,21 +166,24 @@ describe("FilterSidebar", () => {
     expect(dateInput).toHaveValue("2026-09-20");
   });
 
-  it("aplica os filtros selecionados e fecha o painel", async () => {
+  it("aplica os filtros selecionados com os slugs das tags de setor e fecha o painel", async () => {
     const onApplyFilters = vi.fn();
     const onClose = vi.fn();
 
-    vi.mocked(fetchTags).mockResolvedValue([
+    vi.mocked(fetchAllAvailableTags).mockResolvedValue([
       { id_etiqueta: 10, nome: "Importante" },
     ]);
 
     renderSidebar({ onApplyFilters, onClose });
 
     fireEvent.change(screen.getByLabelText("Pesquisar etiquetas"), {
-      target: { value: "im" },
+      target: { value: "Imp" },
     });
 
     fireEvent.click(await screen.findByLabelText("Importante"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Selecionar setor/tipo" })
+    );
     fireEvent.click(screen.getByLabelText("Técnico"));
 
     fireEvent.change(screen.getByLabelText("Atualizado em"), {
@@ -151,37 +193,41 @@ describe("FilterSidebar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
 
     expect(onApplyFilters).toHaveBeenCalledWith({
-      tags: [10],
-      tipo: ["Técnico"],
+      tags: ["Importante"],
+      tipo: ["tecnico"],
       data_atualizacao: "2026-09-20",
     });
 
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("limpa os filtros selecionados", () => {
+  it("limpa os filtros selecionados sem fechar o painel", () => {
     const onApplyFilters = vi.fn();
+    const onClearFilters = vi.fn();
     const onClose = vi.fn();
 
     renderSidebar({
       onApplyFilters,
+      onClearFilters,
       onClose,
       filters: {
-        tags: [10],
-        tipo: ["Técnico"],
+        tags: ["Importante"],
+        tipo: ["tecnico"],
         data_atualizacao: "2026-09-20",
       },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
 
-    expect(onApplyFilters).toHaveBeenCalledWith({
+    expect(onClearFilters).toHaveBeenCalledWith({
       tags: [],
       tipo: [],
       data_atualizacao: "",
     });
+    expect(onApplyFilters).not.toHaveBeenCalled();
 
-    expect(onClose).toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("fecha pelo botão X", () => {

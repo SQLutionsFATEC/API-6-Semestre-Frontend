@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import DocumentList from "../../components/Document/DocumentList/DocumentList";
+import DocumentList from "./DocumentList";
 
-vi.mock("../../components/Document/DocumentItem/DocumentItem", () => ({
+vi.mock("../DocumentItem/DocumentItem", () => ({
   default: ({ document, onView }) => (
     <div data-testid="document-item">
       <span>{document.nome}</span>

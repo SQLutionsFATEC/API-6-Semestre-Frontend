@@ -1,8 +1,14 @@
+import { useEffect, useState, useRef } from "react";
+import {
+  FiChevronDown,
+  FiChevronUp,
+  FiFilter,
+  FiRotateCcw,
+  FiSearch,
+  FiX,
+} from "react-icons/fi";
 
-import { useEffect, useState } from "react";
-import { FiX, FiSearch, FiFilter, FiRotateCcw } from "react-icons/fi";
-
-import { fetchTags } from "../../services/documentService";
+import { fetchAllAvailableTags } from "../../services/documentService";
 import "./FilterSidebar.css";
 
 const EMPTY_FILTERS = {
@@ -12,33 +18,73 @@ const EMPTY_FILTERS = {
 };
 
 const SECTORS = [
-  "Técnico",
-  "Normativo",
-  "Judiciário",
-  "Qualitativo",
+  { label: "Técnico", value: "tecnico" },
+  { label: "Normativo", value: "normativo" },
+  { label: "Jurídico", value: "juridico" },
+  { label: "Qualitativo", value: "qualitativo" },
 ];
 
+function getSectorLabel(value) {
+  const sector = SECTORS.find(
+    (item) =>
+      item.value === value ||
+      item.label.toLowerCase() === String(value).toLowerCase()
+  );
+  return sector ? sector.label : value;
+}
+
+function getSectorValue(labelOrValue) {
+  const sector = SECTORS.find(
+    (item) =>
+      item.value === labelOrValue ||
+      item.label.toLowerCase() === String(labelOrValue).toLowerCase()
+  );
+  return sector ? sector.value : labelOrValue;
+}
+
 function getTagId(tag) {
-  return tag.id_etiqueta ?? tag.id ?? tag.pk;
+  if (typeof tag === "string") return tag;
+  return tag?.id_etiqueta ?? tag?.id ?? tag?.pk;
 }
 
 function getTagName(tag) {
-  return tag.nome ?? tag.name ?? tag.etiqueta ?? "";
+  if (typeof tag === "string") return tag;
+  return tag?.nome ?? tag?.name ?? tag?.etiqueta ?? "";
+}
+
+function normalizeSearchValue(value) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase();
 }
 
 function copyFilters(filters) {
   return {
     tags: [...(filters?.tags ?? [])],
-    tipo: [...(filters?.tipo ?? [])],
+    tipo: [...(filters?.tipo ?? []).map(getSectorValue)],
     data_atualizacao: filters?.data_atualizacao ?? "",
   };
 }
 
-function FilterSidebar({
-  isOpen,
+function isValidFilterDate(value) {
+  if (!value) return true;
+  const [year, month, day] = String(value).split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return (
+    /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+}
+
+function FilterSidebarContent({
   onClose,
   filters = EMPTY_FILTERS,
   onApplyFilters,
+  onClearFilters,
+  isOpen,
 }) {
   const [draftFilters, setDraftFilters] = useState(() =>
     copyFilters(filters)
@@ -47,33 +93,36 @@ function FilterSidebar({
   const [availableTags, setAvailableTags] = useState([]);
   const [loadingTags, setLoadingTags] = useState(false);
   const [tagError, setTagError] = useState("");
+  const [isSectorSelectOpen, setIsSectorSelectOpen] = useState(false);
+  const sectorSelectRef = useRef(null);
+
+  const normalizedTagSearch = normalizeSearchValue(tagSearch.trim());
+  const hasTagSearch = normalizedTagSearch.length > 0;
+  const filteredTags = hasTagSearch
+    ? availableTags.filter((tag) =>
+      normalizeSearchValue(getTagName(tag)).includes(normalizedTagSearch)
+    )
+    : [];
 
   useEffect(() => {
     if (isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- o rascunho deve refletir os filtros ao abrir o modal.
       setDraftFilters(copyFilters(filters));
+      setTagSearch("");
+      setIsSectorSelectOpen(false);
     }
   }, [isOpen, filters]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
 
-    const query = tagSearch.trim();
-
-    if (query.length < 2) {
-      setAvailableTags([]);
-      setLoadingTags(false);
-      setTagError("");
-      return undefined;
-    }
-
     let cancelled = false;
-
     const timer = setTimeout(async () => {
       setLoadingTags(true);
       setTagError("");
 
       try {
-        const result = await fetchTags(query);
+        const result = await fetchAllAvailableTags();
 
         if (!cancelled) {
           setAvailableTags(Array.isArray(result) ? result : []);
@@ -94,11 +143,9 @@ function FilterSidebar({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [tagSearch, isOpen]);
+  }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
-
     function handleEscape(event) {
       if (event.key === "Escape") {
         onClose();
@@ -110,23 +157,35 @@ function FilterSidebar({
     return () => {
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isOpen, onClose]);
+  }, [onClose]);
 
-  function toggleTag(tagId) {
+  // function handleTagSearchChange(event) {
+  //   const value = event.target.value;
+  //   setTagSearch(value);
+
+  //   if (value.trim().length < 2) {
+  //     setAvailableTags([]);
+  //     setLoadingTags(false);
+  //     setTagError("");
+  //   }
+  // }
+
+  function toggleTag(tagName) {
     setDraftFilters((current) => ({
       ...current,
-      tags: current.tags.includes(tagId)
-        ? current.tags.filter((id) => id !== tagId)
-        : [...current.tags, tagId],
+      tags: current.tags.includes(tagName)
+        ? current.tags.filter((name) => name !== tagName)
+        : [...current.tags, tagName],
     }));
   }
 
   function toggleSector(sector) {
+    const value = getSectorValue(sector);
     setDraftFilters((current) => ({
       ...current,
-      tipo: current.tipo.includes(sector)
-        ? current.tipo.filter((item) => item !== sector)
-        : [...current.tipo, sector],
+      tipo: current.tipo.includes(value)
+        ? current.tipo.filter((item) => item !== value)
+        : [...current.tipo, value],
     }));
   }
 
@@ -135,21 +194,22 @@ function FilterSidebar({
 
     setDraftFilters(clearedFilters);
     setTagSearch("");
-    setAvailableTags([]);
     setTagError("");
+    setIsSectorSelectOpen(false);
 
-    onApplyFilters(clearedFilters);
-    onClose();
+    onClearFilters(clearedFilters);
   }
 
   function handleApplyFilters(event) {
     event.preventDefault();
 
-    onApplyFilters(copyFilters(draftFilters));
+    const nextFilters = copyFilters(draftFilters);
+    if (!isValidFilterDate(nextFilters.data_atualizacao)) {
+      nextFilters.data_atualizacao = "";
+    }
+    onApplyFilters(nextFilters);
     onClose();
   }
-
-  if (!isOpen) return null;
 
   return (
     <div
@@ -200,18 +260,29 @@ function FilterSidebar({
                 id="filter-tag-search"
                 type="search"
                 value={tagSearch}
-                placeholder="Digite pelo menos 2 caracteres"
+                placeholder="Pesquisar etiquetas"
                 onChange={(event) => setTagSearch(event.target.value)}
               />
             </div>
 
-            {tagSearch.trim().length < 2 && (
-              <p className="filter-helper-text">
-                Digite pelo menos 2 caracteres para buscar etiquetas.
-              </p>
+            {draftFilters.tags.length > 0 && (
+              <div className="filter-selected-tags">
+                {draftFilters.tags.map((tagName) => (
+                  <span className="filter-selection-chip" key={tagName}>
+                    {tagName}
+                    <button
+                      type="button"
+                      aria-label={`Remover etiqueta ${tagName}`}
+                      onClick={() => toggleTag(tagName)}
+                    >
+                      <FiX size={14} aria-hidden="true" />
+                    </button>
+                  </span>
+                ))}
+              </div>
             )}
 
-            {loadingTags && (
+            {hasTagSearch && loadingTags && (
               <p className="filter-helper-text" role="status">
                 Carregando etiquetas...
               </p>
@@ -223,18 +294,18 @@ function FilterSidebar({
               </p>
             )}
 
-            {!loadingTags &&
+            {hasTagSearch &&
+              !loadingTags &&
               !tagError &&
-              tagSearch.trim().length >= 2 &&
-              availableTags.length === 0 && (
+              filteredTags.length === 0 && (
                 <p className="filter-helper-text">
                   Nenhuma etiqueta encontrada.
                 </p>
               )}
 
-            {availableTags.length > 0 && (
+            {hasTagSearch && filteredTags.length > 0 && (
               <div className="filter-options filter-tag-options">
-                {availableTags.map((tag, index) => {
+                {filteredTags.map((tag, index) => {
                   const tagId = getTagId(tag);
                   const tagName = getTagName(tag);
 
@@ -247,8 +318,8 @@ function FilterSidebar({
                     >
                       <input
                         type="checkbox"
-                        checked={draftFilters.tags.includes(tagId)}
-                        onChange={() => toggleTag(tagId)}
+                        checked={draftFilters.tags.includes(tagName)}
+                        onChange={() => toggleTag(tagName)}
                       />
                       <span>{tagName}</span>
                     </label>
@@ -261,17 +332,72 @@ function FilterSidebar({
           <section className="filter-section">
             <h3>Setor/Tipo</h3>
 
-            <div className="filter-options">
-              {SECTORS.map((sector) => (
-                <label className="filter-option" key={sector}>
-                  <input
-                    type="checkbox"
-                    checked={draftFilters.tipo.includes(sector)}
-                    onChange={() => toggleSector(sector)}
-                  />
-                  <span>{sector}</span>
-                </label>
-              ))}
+            <div className="filter-multiselect" ref={sectorSelectRef}>
+              <div className="filter-multiselect-trigger">
+                <div className="filter-multiselect-values">
+                  {draftFilters.tipo.length > 0 ? (
+                    draftFilters.tipo.map((sectorValue) => {
+                      const label = getSectorLabel(sectorValue);
+                      return (
+                        <span className="filter-selection-chip" key={sectorValue}>
+                          {label}
+                          <button
+                            type="button"
+                            aria-label={`Remover ${label}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleSector(sectorValue);
+                            }}
+                          >
+                            <FiX size={14} aria-hidden="true" />
+                          </button>
+                        </span>
+                      );
+                    })
+                  ) : (
+                    <span className="filter-multiselect-placeholder">
+                      Selecionar setor/tipo
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="filter-multiselect-toggle"
+                  aria-label={`Selecionar setor/tipo${draftFilters.tipo.length > 0
+                    ? `: ${draftFilters.tipo.map(getSectorLabel).join(", ")}`
+                    : ""
+                    }`}
+                  aria-expanded={isSectorSelectOpen}
+                  aria-controls="filter-sector-options"
+                  onClick={() => setIsSectorSelectOpen((isOpen) => !isOpen)}
+                >
+                  {isSectorSelectOpen ? (
+                    <FiChevronUp size={18} aria-hidden="true" />
+                  ) : (
+                    <FiChevronDown size={18} aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+
+              {isSectorSelectOpen && (
+                <div
+                  id="filter-sector-options"
+                  className="filter-multiselect-options"
+                  role="listbox"
+                  aria-multiselectable="true"
+                >
+                  {SECTORS.map((sector) => (
+                    <label className="filter-option" key={sector.value}>
+                      <input
+                        type="checkbox"
+                        checked={draftFilters.tipo.includes(sector.value)}
+                        onChange={() => toggleSector(sector.value)}
+                      />
+                      <span>{sector.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 
@@ -317,6 +443,12 @@ function FilterSidebar({
       </aside>
     </div>
   );
+}
+
+function FilterSidebar({ isOpen, ...props }) {
+  if (!isOpen) return null;
+
+  return <FilterSidebarContent {...props} isOpen={isOpen} />;
 }
 
 export default FilterSidebar;

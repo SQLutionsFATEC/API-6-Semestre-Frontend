@@ -39,6 +39,12 @@ describe("DocumentModal", () => {
     expect(screen.getByText("Aprovado")).toBeInTheDocument();
   });
 
+  it("exibe o setor formatado no card de estatísticas", () => {
+    renderModal({ document: { ...documentData, setor: "juridico" } });
+
+    expect(screen.getByText("Jurídico")).toBeInTheDocument();
+  });
+
   it("informa quando o documento nao possui etiquetas", () => {
     renderModal({ document: { ...documentData, etiquetas: [] } });
 

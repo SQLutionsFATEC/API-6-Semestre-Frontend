@@ -1,4 +1,5 @@
 import { FiEye, FiLock } from "react-icons/fi";
+import { formatarSetor } from "../../../utils/documentFormatters";
 import "./DocumentItem.css";
 
 function formatarData(dataISO) {
@@ -17,9 +18,16 @@ function formatarData(dataISO) {
 function DocumentItem({ document, onView, onOpenDetails }) {
   const isRestricted = document.acesso_permitido === false;
 
-  const typeClass = document.setor
-    ?.toLowerCase()
-    .replace(/\s+/g, "-");
+  const displaySetor = formatarSetor(document);
+
+  const typeClass =
+    displaySetor && displaySetor !== "-"
+      ? String(displaySetor)
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+      : "";
 
   const accessClass = document.nivel
     ?.toLowerCase()
@@ -64,8 +72,8 @@ function DocumentItem({ document, onView, onOpenDetails }) {
       </div>
 
       <div className="document-type">
-        <span className={`type-badge type-${typeClass}`}>
-          {document.setor}
+        <span className={`type-badge ${typeClass ? `type-${typeClass}` : ""}`}>
+          {displaySetor}
         </span>
       </div>
 
