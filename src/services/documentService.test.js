@@ -486,7 +486,7 @@ describe("createDocument", () => {
     };
     api.post.mockResolvedValue({ data: payload });
 
-    await expect(createDocument({
+    const result = await createDocument({
       nome: "doc.pdf",
       setor: "Técnico",
       nivel: "Básico",
