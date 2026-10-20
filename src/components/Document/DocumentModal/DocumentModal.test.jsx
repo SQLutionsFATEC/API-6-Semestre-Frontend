@@ -48,7 +48,9 @@ describe("DocumentModal", () => {
   it("informa quando o documento nao possui etiquetas", () => {
     renderModal({ document: { ...documentData, etiquetas: [] } });
 
-    expect(screen.getByText("Nenhuma etiqueta atribuída.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Nenhuma etiqueta atribuída.")
+    ).toBeInTheDocument();
   });
 
   it("fecha pelo botao e pelo clique no overlay, mas nao pelo conteudo", () => {
@@ -61,7 +63,9 @@ describe("DocumentModal", () => {
     fireEvent.click(screen.getByLabelText("Fechar"));
     expect(onClose).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(globalThis.document.querySelector(".document-modal-overlay"));
+    fireEvent.click(
+      globalThis.document.querySelector(".document-modal-overlay")
+    );
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
@@ -77,7 +81,9 @@ describe("DocumentModal", () => {
   it("desabilita a visualizacao sem URL de arquivo", () => {
     renderModal({ document: { ...documentData, data: "" } });
 
-    expect(screen.getByRole("button", { name: "Visualizar" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Visualizar" })
+    ).toBeDisabled();
   });
 
   it("exibe o estado de carregamento", () => {
@@ -86,7 +92,9 @@ describe("DocumentModal", () => {
     expect(
       screen.getByText("Carregando detalhes do documento...")
     ).toBeInTheDocument();
-    expect(screen.queryByText("Manual de teste.pdf")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Manual de teste.pdf")
+    ).not.toBeInTheDocument();
   });
 
   it("exibe o erro e permite tentar novamente", () => {
@@ -116,19 +124,30 @@ describe("DocumentModal", () => {
   });
 
   it("usa o badge padrao quando o tipo de arquivo esta ausente", () => {
-    renderModal({ document: { ...documentData, tipo_arquivo: undefined } });
+    renderModal({
+      document: { ...documentData, tipo_arquivo: undefined },
+    });
 
     expect(screen.getByText("ARQUIVO")).toBeInTheDocument();
   });
 
   it("formata a data de atualizacao e trata valores invalidos", () => {
-    renderModal({ document: { ...documentData, data_atualizacao: "2026-01-05T10:00:00Z" } });
+    renderModal({
+      document: {
+        ...documentData,
+        data_atualizacao: "2026-01-05T10:00:00Z",
+      },
+    });
     expect(screen.getByText("05/01/2026")).toBeInTheDocument();
 
-    renderModal({ document: { ...documentData, data_atualizacao: "data-invalida" } });
+    renderModal({
+      document: { ...documentData, data_atualizacao: "data-invalida" },
+    });
     expect(screen.getByText("data-invalida")).toBeInTheDocument();
 
-    renderModal({ document: { ...documentData, data_atualizacao: "" } });
+    renderModal({
+      document: { ...documentData, data_atualizacao: "" },
+    });
     expect(screen.getByText("-")).toBeInTheDocument();
   });
 
@@ -136,7 +155,9 @@ describe("DocumentModal", () => {
     const onClose = vi.fn();
     renderModal({ error: "Falha", onClose });
 
-    fireEvent.click(globalThis.document.querySelector(".document-modal-overlay"));
+    fireEvent.click(
+      globalThis.document.querySelector(".document-modal-overlay")
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -149,7 +170,9 @@ describe("DocumentModal", () => {
     });
 
     expect(screen.getByText("Acesso Bloqueado")).toBeInTheDocument();
-    expect(screen.getByText("Documento com Acesso Restrito")).toBeInTheDocument();
+    expect(
+      screen.getByText("Documento com Acesso Restrito")
+    ).toBeInTheDocument();
   });
 
   it("exibe badge de acesso liberado quando acesso_permitido e true", () => {
@@ -171,7 +194,9 @@ describe("DocumentModal", () => {
       },
     });
 
-    const editButton = screen.getByRole("button", { name: /editar documento/i });
+    const editButton = screen.getByRole("button", {
+      name: /editar documento/i,
+    });
     expect(editButton).toBeDisabled();
     expect(editButton).toHaveAttribute("title", "Edição bloqueada");
   });
@@ -184,7 +209,9 @@ describe("DocumentModal", () => {
       },
     });
 
-    const editButton = screen.getByRole("button", { name: /editar documento/i });
+    const editButton = screen.getByRole("button", {
+      name: /editar documento/i,
+    });
     expect(editButton).not.toBeDisabled();
   });
 });

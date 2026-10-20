@@ -8,12 +8,14 @@ import {
   fetchDocumentById,
   fetchDocuments,
   fetchTags,
+  updateDocument,
 } from "./documentService";
 
 vi.mock("./api", () => ({
   default: {
     get: vi.fn(),
     post: vi.fn(),
+    patch: vi.fn(),
   },
 }));
 
@@ -210,6 +212,44 @@ describe("fetchDocuments", () => {
     });
 
     await expect(fetchDocuments()).resolves.toEqual(responseData);
+  });
+
+  it("retorna o payload como está quando a resposta não traz results", async () => {
+    const payload = { detail: "sem resultados" };
+    api.get.mockResolvedValue({ data: payload });
+
+    await expect(fetchDocuments()).resolves.toEqual(payload);
+  });
+
+  it("calcula acesso_permitido pelo id quando a API não informa o campo", async () => {
+    api.get.mockResolvedValue({
+      data: {
+        pages: 1,
+        results: [
+          { id_documento: 3, nome: "ímpar.pdf" },
+          { id_documento: 4, nome: "par.pdf" },
+        ],
+      },
+    });
+
+    const result = await fetchDocuments();
+
+    expect(result.results[0].acesso_permitido).toBe(true);
+    expect(result.results[1].acesso_permitido).toBe(false);
+  });
+
+  it("usa o índice da lista como fallback quando o documento não tem id", async () => {
+    api.get.mockResolvedValue({
+      data: {
+        pages: 1,
+        results: [{ nome: "primeiro" }, { nome: "segundo" }],
+      },
+    });
+
+    const result = await fetchDocuments();
+
+    expect(result.results[0].acesso_permitido).toBe(true);
+    expect(result.results[1].acesso_permitido).toBe(false);
   });
 
   describe("critérios de aceitação da A6-36 / US-4", () => {
@@ -426,6 +466,33 @@ describe("fetchAllAvailableTags", () => {
     await expect(fetchAllAvailableTags()).resolves.toEqual(responseData);
     expect(api.get).toHaveBeenCalledWith("/api/etiquetas/");
   });
+
+  it("percorre todas as páginas quando a API pagina as etiquetas", async () => {
+    api.get
+      .mockResolvedValueOnce({
+        data: {
+          results: [{ id_etiqueta: 1, nome: "a" }],
+          next: "http://localhost/api/etiquetas/?page=2",
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          results: [{ id_etiqueta: 2, nome: "b" }],
+          next: null,
+        },
+      });
+
+    await expect(fetchAllAvailableTags()).resolves.toEqual([
+      { id_etiqueta: 1, nome: "a" },
+      { id_etiqueta: 2, nome: "b" },
+    ]);
+
+    expect(api.get).toHaveBeenCalledTimes(2);
+    expect(api.get).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost/api/etiquetas/?page=2"
+    );
+  });
 });
 
 describe("fetchDocumentById", () => {
@@ -490,12 +557,14 @@ describe("createDocument", () => {
     };
     api.post.mockResolvedValue({ data: createdDocument });
 
-    await expect(createDocument({
-      nome: "doc.pdf",
-      setor: "Técnico",
-      nivel: "Básico",
-      file,
-    })).resolves.toEqual(createdDocument);
+    await expect(
+      createDocument({
+        nome: "doc.pdf",
+        setor: "Técnico",
+        nivel: "Básico",
+        file,
+      })
+    ).resolves.toEqual(createdDocument);
 
     expect(api.post).toHaveBeenCalledTimes(1);
     const [url, formData] = api.post.mock.calls[0];
@@ -505,5 +574,57 @@ describe("createDocument", () => {
     expect(formData.get("nivel")).toBe("Básico");
     expect(formData.get("tipo_arquivo")).toBe("pdf");
     expect(formData.get("data")).toBe(file);
+  });
+
+  it("não envia o arquivo quando file é nulo", async () => {
+    api.post.mockResolvedValue({ data: { id_documento: 1 } });
+
+    await createDocument({
+      nome: "doc",
+      setor: "Tecnico",
+      nivel: "Basico",
+    });
+
+    const [, formData] = api.post.mock.calls[0];
+    expect(formData.get("data")).toBeNull();
+    expect(formData.get("tipo_arquivo")).toBe("pdf");
+  });
+});
+
+describe("updateDocument", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("envia o payload de atualização e retorna a resposta da API", async () => {
+    const updated = {
+      id_documento: 42,
+      nome: "Atualizado.pdf",
+      setor: "juridico",
+      nivel: "operador",
+    };
+    api.patch.mockResolvedValue({ data: updated });
+
+    await expect(
+      updateDocument(42, {
+        nome: "Atualizado.pdf",
+        setor: "juridico",
+        nivel: "operador",
+      })
+    ).resolves.toEqual(updated);
+
+    expect(api.patch).toHaveBeenCalledWith("/api/documentos/42/", {
+      nome: "Atualizado.pdf",
+      setor: "juridico",
+      nivel: "operador",
+    });
+  });
+
+  it("lança erro quando o id não é informado", async () => {
+    await expect(updateDocument(null, { nome: "x" })).rejects.toThrow(
+      "O identificador do documento é obrigatório."
+    );
+
+    expect(api.patch).not.toHaveBeenCalled();
   });
 });
