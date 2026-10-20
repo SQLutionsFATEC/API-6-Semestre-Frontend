@@ -17,21 +17,10 @@ function UploadModal({
   onDocumentCreated,
   onViewDocument,
 }) {
-  const SETORES = [
-    "Técnico",
-    "Normativo",
-    "Jurídico",
-    "Qualitativo",
-  ];
+  const NIVEIS_ACESSO = ["Básico", "Comercial", "Militar"];
 
-  const NIVEIS_ACESSO = [
-    "Básico",
-    "Comercial",
-    "Militar",
-  ];
   const INITIAL_FORM = {
     name: "",
-    sector: "",
     accessLevel: "Básico",
   };
 
@@ -106,23 +95,18 @@ function UploadModal({
       return;
     }
 
-    if (!form.sector.trim()) {
-      setError("O setor responsável é obrigatório.");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
+
       const created = await createDocumentFn({
         nome: form.name.trim(),
-        setor: form.sector.trim(),
         nivel: form.accessLevel,
         file,
       });
 
       setCreatedInfo({
         fileName: file.name,
-        sector: form.sector,
+        sector: created.setor || "Classificado pela IA",
         document: created,
       });
       setIsSuccess(true);
@@ -343,28 +327,7 @@ function UploadModal({
                 />
               </div>
 
-              <div className="upload-form-row grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="upload-form-group flex flex-col w-full">
-                  <label htmlFor="document-sector" className="upload-label block text-[13px] font-semibold text-slate-700 mb-1.5">
-                    Setor responsável *
-                  </label>
-                  <select
-                    id="document-sector"
-                    className="upload-select w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all box-border"
-                    value={form.sector}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, sector: e.target.value }))
-                    }
-                  >
-                    <option value="">Selecione um setor</option>
-                    {SETORES.map((setor) => (
-                      <option key={setor} value={setor}>
-                        {setor}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
+              <div className="upload-form-row grid grid-cols-1 gap-4">
                 <div className="upload-form-group flex flex-col w-full">
                   <label htmlFor="document-level" className="upload-label block text-[13px] font-semibold text-slate-700 mb-1.5">
                     Nível de acesso *

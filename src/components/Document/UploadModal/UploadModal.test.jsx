@@ -8,7 +8,7 @@ describe("UploadModal", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("inicia com nível de acesso 'Básico' e exibe os setores e níveis corretos com acentuação", () => {
+  it("inicia com nível de acesso 'Básico' e exibe os níveis corretos com acentuação", () => {
     render(<UploadModal isOpen={true} onClose={vi.fn()} />);
 
     const selectLevel = screen.getByLabelText(/Nível de acesso/i);
@@ -21,17 +21,7 @@ describe("UploadModal", () => {
     expect(levelOptions).not.toContain("Operador");
     expect(levelOptions).not.toContain("operador");
 
-    const selectSector = screen.getByLabelText(/Setor responsável/i);
-    const sectorOptions = Array.from(selectSector.querySelectorAll("option")).map(
-      (opt) => opt.textContent
-    );
-    expect(sectorOptions).toEqual([
-      "Selecione um setor",
-      "Técnico",
-      "Normativo",
-      "Jurídico",
-      "Qualitativo",
-    ]);
+    expect(screen.queryByLabelText(/Setor responsável/i)).not.toBeInTheDocument();
   });
 
   it("permite alterar o nível de acesso", () => {
@@ -104,9 +94,6 @@ describe("UploadModal", () => {
     fireEvent.change(screen.getByLabelText(/Nome do documento/i), {
       target: { value: "Meu Documento" },
     });
-    fireEvent.change(screen.getByLabelText(/Setor responsável/i), {
-      target: { value: "Técnico" },
-    });
 
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
 
@@ -125,28 +112,11 @@ describe("UploadModal", () => {
     fireEvent.change(screen.getByLabelText(/Nome do documento/i), {
       target: { value: "   " },
     });
-    fireEvent.change(screen.getByLabelText(/Setor responsável/i), {
-      target: { value: "Técnico" },
-    });
 
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
 
     expect(
       screen.getByText("O nome do documento é obrigatório.")
-    ).toBeInTheDocument();
-  });
-
-  it("não deve aceitar formulário com setor vazio", async () => {
-    render(<UploadModal isOpen={true} onClose={vi.fn()} />);
-
-    const fileInput = document.querySelector(".upload-file-input");
-    const testFile = new File(["pdf"], "doc.pdf", { type: "application/pdf" });
-    fireEvent.change(fileInput, { target: { files: [testFile] } });
-
-    fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
-
-    expect(
-      screen.getByText("O setor responsável é obrigatório.")
     ).toBeInTheDocument();
   });
 
@@ -193,10 +163,6 @@ describe("UploadModal", () => {
     const testFile = new File(["pdf content"], "Manual.pdf", { type: "application/pdf" });
     fireEvent.change(fileInput, { target: { files: [testFile] } });
 
-    fireEvent.change(screen.getByLabelText(/Setor responsável/i), {
-      target: { value: "Técnico" },
-    });
-
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
 
     expect(
@@ -230,16 +196,12 @@ describe("UploadModal", () => {
     });
     fireEvent.change(fileInput, { target: { files: [testFile] } });
 
-    fireEvent.change(screen.getByLabelText(/Setor responsável/i), {
-      target: { value: "Técnico" },
-    });
-
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
 
     await waitFor(() => {
+
       expect(mockCreate).toHaveBeenCalledWith({
         nome: "Manual de manutenção.pdf",
-        setor: "Técnico",
         nivel: "Básico",
         file: testFile,
       });
@@ -251,6 +213,8 @@ describe("UploadModal", () => {
     });
 
     expect(await screen.findByText("Documento cadastrado com sucesso!")).toBeInTheDocument();
+    
+    expect(screen.getByText("Técnico")).toBeInTheDocument();
 
     const viewBtn = screen.getByRole("button", { name: "Ver documento" });
     fireEvent.click(viewBtn);
@@ -272,7 +236,6 @@ describe("UploadModal", () => {
 
     const testFile = new File(["pdf content"], "Manual.pdf", { type: "application/pdf" });
     fireEvent.change(document.querySelector(".upload-file-input"), { target: { files: [testFile] } });
-    fireEvent.change(screen.getByLabelText(/Setor responsável/i), { target: { value: "Técnico" } });
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
     
     await screen.findByText("Documento cadastrado com sucesso!");
@@ -293,9 +256,6 @@ describe("UploadModal", () => {
     const fileInput = document.querySelector(".upload-file-input");
     fireEvent.change(fileInput, {
       target: { files: [new File(["pdf"], "doc.pdf", { type: "application/pdf" })] },
-    });
-    fireEvent.change(screen.getByLabelText(/Setor responsável/i), {
-      target: { value: "Técnico" },
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
@@ -318,9 +278,6 @@ describe("UploadModal", () => {
 
     fireEvent.change(document.querySelector(".upload-file-input"), {
       target: { files: [new File(["pdf"], "doc.pdf", { type: "application/pdf" })] },
-    });
-    fireEvent.change(screen.getByLabelText(/Setor responsável/i), {
-      target: { value: "Técnico" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
 
