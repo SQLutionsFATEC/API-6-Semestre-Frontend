@@ -48,7 +48,7 @@ describe("DocumentModal", () => {
   it("informa quando o documento nao possui etiquetas", () => {
     renderModal({ document: { ...documentData, etiquetas: [] } });
 
-    expect(screen.getByText("Nenhuma etiqueta atribuida.")).toBeInTheDocument();
+    expect(screen.getByText("Nenhuma etiqueta atribuída.")).toBeInTheDocument();
   });
 
   it("fecha pelo botao e pelo clique no overlay, mas nao pelo conteudo", () => {
