@@ -22,7 +22,7 @@ function getDocumentFormat(document) {
 function PdfViewer({ document, onClose }) {
   const [zoom, setZoom] = useState(100);
   const [pdfDocument, setPdfDocument] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(document));
   const [error, setError] = useState(null);
 
   const canvasRefs = useRef([]);
@@ -50,10 +50,6 @@ function PdfViewer({ document, onClose }) {
     let cancelled = false;
     let loadingTask;
 
-    setPdfDocument(null);
-    setError(null);
-    setZoom(100);
-    setLoading(Boolean(document));
     canvasRefs.current = [];
 
     if (!document) {
@@ -150,7 +146,6 @@ function PdfViewer({ document, onClose }) {
             });
 
             renderTasks.push(renderTask);
-
             await renderTask.promise;
           })
         );

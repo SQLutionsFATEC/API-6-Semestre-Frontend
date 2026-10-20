@@ -39,7 +39,8 @@ function findOptionValue(value, options, fallback = "") {
 
   const normalized = normalizeValue(value);
   const option = options.find(
-    (item) => normalizeValue(item.value) === normalized ||
+    (item) =>
+      normalizeValue(item.value) === normalized ||
       normalizeValue(item.label) === normalized
   );
 
@@ -78,10 +79,12 @@ function EditDocumentModal({
     findOptionValue(document?.nivel, NIVEIS_ACESSO, "basico")
   );
   const [selectedTags, setSelectedTags] = useState(
-    (document?.etiquetas || []).map((tag) => ({
-      id_etiqueta: getTagId(tag),
-      nome: getTagName(tag),
-    })).filter((tag) => tag.nome)
+    (document?.etiquetas || [])
+      .map((tag) => ({
+        id_etiqueta: getTagId(tag),
+        nome: getTagName(tag),
+      }))
+      .filter((tag) => tag.nome)
   );
   const [tagSearch, setTagSearch] = useState("");
   const [tagOptions, setTagOptions] = useState([]);
@@ -94,8 +97,6 @@ function EditDocumentModal({
     let cancelled = false;
 
     if (tagSearch.trim().length < 2) {
-      setTagOptions([]);
-      setLoadingTags(false);
       return undefined;
     }
 
@@ -104,6 +105,7 @@ function EditDocumentModal({
 
       try {
         const tags = await fetchTagsFn(tagSearch);
+
         if (!cancelled) {
           const selectedNames = new Set(
             selectedTags.map((tag) => normalizeValue(tag.nome))
@@ -111,14 +113,19 @@ function EditDocumentModal({
 
           setTagOptions(
             (Array.isArray(tags) ? tags : []).filter(
-              (tag) => !selectedNames.has(normalizeValue(getTagName(tag)))
+              (tag) =>
+                !selectedNames.has(normalizeValue(getTagName(tag)))
             )
           );
         }
       } catch {
-        if (!cancelled) setTagOptions([]);
+        if (!cancelled) {
+          setTagOptions([]);
+        }
       } finally {
-        if (!cancelled) setLoadingTags(false);
+        if (!cancelled) {
+          setLoadingTags(false);
+        }
       }
     }, 250);
 
@@ -128,12 +135,25 @@ function EditDocumentModal({
     };
   }, [tagSearch, fetchTagsFn, selectedTags]);
 
+  function handleTagSearchChange(event) {
+    const value = event.target.value;
+
+    setTagSearch(value);
+    setShowTagOptions(true);
+
+    if (value.trim().length < 2) {
+      setTagOptions([]);
+      setLoadingTags(false);
+    }
+  }
+
   function handleAddTag(tag) {
-    const name = getTagName(tag).trim();
-    if (!name) return;
+    const tagName = getTagName(tag).trim();
+
+    if (!tagName) return;
 
     const alreadySelected = selectedTags.some(
-      (item) => normalizeValue(item.nome) === normalizeValue(name)
+      (item) => normalizeValue(item.nome) === normalizeValue(tagName)
     );
 
     if (!alreadySelected) {
@@ -141,13 +161,14 @@ function EditDocumentModal({
         ...current,
         {
           id_etiqueta: getTagId(tag),
-          nome: name,
+          nome: tagName,
         },
       ]);
     }
 
     setTagSearch("");
     setTagOptions([]);
+    setLoadingTags(false);
     setShowTagOptions(false);
   }
 
@@ -194,8 +215,8 @@ function EditDocumentModal({
         nome: name.trim(),
         setor: sector,
         nivel: accessLevel,
-        etiquetas: selectedTags.map((tag) =>
-          tag.id_etiqueta ?? tag.nome
+        etiquetas: selectedTags.map(
+          (tag) => tag.id_etiqueta ?? tag.nome
         ),
       };
 
@@ -236,8 +257,12 @@ function EditDocumentModal({
       <section className="edit-document-modal">
         <header className="edit-document-header">
           <div>
-            <span className="edit-document-eyebrow">Editar documento</span>
-            <h2 id="edit-document-title">{document?.nome || "Documento"}</h2>
+            <span className="edit-document-eyebrow">
+              Editar documento
+            </span>
+            <h2 id="edit-document-title">
+              {document?.nome || "Documento"}
+            </h2>
           </div>
 
           <button
@@ -254,7 +279,9 @@ function EditDocumentModal({
           <div className="edit-document-file">
             <FiFileText size={22} aria-hidden="true" />
             <div>
-              <strong>{document?.nome || "Arquivo do documento"}</strong>
+              <strong>
+                {document?.nome || "Arquivo do documento"}
+              </strong>
               <span>
                 {document?.tipo_arquivo?.toUpperCase() || "ARQUIVO"} ·
                 {" "}O arquivo não pode ser alterado nesta tela.
@@ -263,7 +290,9 @@ function EditDocumentModal({
           </div>
 
           <div className="edit-document-field">
-            <label htmlFor="edit-document-name">Nome do documento *</label>
+            <label htmlFor="edit-document-name">
+              Nome do documento *
+            </label>
             <input
               id="edit-document-name"
               value={name}
@@ -274,7 +303,9 @@ function EditDocumentModal({
 
           <div className="edit-document-fields-row">
             <div className="edit-document-field">
-              <label htmlFor="edit-document-sector">Setor responsável *</label>
+              <label htmlFor="edit-document-sector">
+                Setor responsável *
+              </label>
               <select
                 id="edit-document-sector"
                 value={sector}
@@ -291,7 +322,9 @@ function EditDocumentModal({
             </div>
 
             <div className="edit-document-field">
-              <label htmlFor="edit-document-level">Nível de acesso *</label>
+              <label htmlFor="edit-document-level">
+                Nível de acesso *
+              </label>
               <select
                 id="edit-document-level"
                 value={accessLevel}
@@ -331,16 +364,14 @@ function EditDocumentModal({
               <input
                 id="edit-document-tags"
                 value={tagSearch}
-                onChange={(event) => {
-                  setTagSearch(event.target.value);
-                  setShowTagOptions(true);
-                }}
+                onChange={handleTagSearchChange}
                 onFocus={() => setShowTagOptions(true)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && tagOptions.length > 0) {
                     event.preventDefault();
                     handleAddTag(tagOptions[0]);
                   }
+
                   if (event.key === "Escape") {
                     setShowTagOptions(false);
                   }
@@ -354,7 +385,8 @@ function EditDocumentModal({
               <div className="edit-document-tag-options" role="listbox">
                 {loadingTags ? (
                   <p className="edit-document-tag-message">
-                    <FiLoader className="edit-document-spinner" /> Buscando etiquetas...
+                    <FiLoader className="edit-document-spinner" />
+                    {" "}Buscando etiquetas...
                   </p>
                 ) : tagOptions.length > 0 ? (
                   tagOptions.map((tag, index) => (
@@ -382,7 +414,10 @@ function EditDocumentModal({
 
           <div className="edit-document-info">
             <FiInfo size={17} />
-            <span>O arquivo original será mantido. Apenas os dados do documento serão atualizados.</span>
+            <span>
+              O arquivo original será mantido. Apenas os dados do documento
+              serão atualizados.
+            </span>
           </div>
 
           {error && (
@@ -411,12 +446,15 @@ function EditDocumentModal({
               >
                 Cancelar
               </button>
+
               <button
                 type="submit"
                 className="edit-document-save"
                 disabled={saving}
               >
-                {saving && <FiLoader className="edit-document-spinner" />}
+                {saving && (
+                  <FiLoader className="edit-document-spinner" />
+                )}
                 {saving ? "Salvando..." : "Salvar alterações"}
               </button>
             </div>
