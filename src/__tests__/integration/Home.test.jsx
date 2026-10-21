@@ -10,6 +10,7 @@ import {
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
   fetchDocumentById: vi.fn(),
+  createDocument: vi.fn(),
   fetchAllAvailableTags: vi.fn(),
   fetchTags: vi.fn(),
 }));
