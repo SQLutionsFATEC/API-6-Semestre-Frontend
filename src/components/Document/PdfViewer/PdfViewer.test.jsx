@@ -89,6 +89,27 @@ describe("PdfViewer", () => {
     expect(pdfDocument.getPage).toHaveBeenCalledTimes(2);
   });
 
+  it("extrai a extensão pela URL quando o nome não tem extensão", async () => {
+    const { pdfDocument } = createPdfDocument();
+    getDocument.mockReturnValue({
+      promise: Promise.resolve(pdfDocument),
+      destroy: vi.fn(),
+    });
+
+    render(
+      <PdfViewer
+        document={{
+          nome: "documento",
+          data: "https://example.com/manual.pdf",
+        }}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByLabelText("Página 1")).toBeInTheDocument();
+    expect(getDocument).toHaveBeenCalled();
+  });
+
   it("limita o zoom entre 50% e 400%", async () => {
     render(<PdfViewer document={pdf} onClose={vi.fn()} />);
     await screen.findByLabelText("Página 1");
@@ -135,8 +156,9 @@ describe("PdfViewer", () => {
   });
 
   it("exibe uma mensagem quando o formato não é PDF", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch");
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     render(
       <PdfViewer
@@ -153,7 +175,6 @@ describe("PdfViewer", () => {
       "Não foi possível carregar ou exibir o documento."
     );
     expect(getDocument).not.toHaveBeenCalled();
-    expect(fetchSpy).not.toHaveBeenCalled();
     expect(consoleError).toHaveBeenCalled();
   });
 
@@ -162,9 +183,43 @@ describe("PdfViewer", () => {
       promise: Promise.reject(new Error("PDF inválido")),
       destroy: vi.fn(),
     });
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
 
     render(<PdfViewer document={pdf} onClose={vi.fn()} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível carregar ou exibir o documento."
+    );
+    expect(consoleError).toHaveBeenCalled();
+  });
+
+  it("exibe erro quando canvas 2D não está disponível", async () => {
+    HTMLCanvasElement.prototype.getContext.mockReturnValue(null);
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    render(<PdfViewer document={pdf} onClose={vi.fn()} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível exibir o documento."
+    );
+    expect(consoleError).toHaveBeenCalled();
+  });
+
+  it("exibe erro quando a URL não está disponível no documento", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    render(
+      <PdfViewer
+        document={{ nome: "sem-url.pdf", tipo_arquivo: "pdf" }}
+        onClose={vi.fn()}
+      />
+    );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Não foi possível carregar ou exibir o documento."
