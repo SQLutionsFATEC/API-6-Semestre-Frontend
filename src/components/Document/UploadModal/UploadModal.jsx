@@ -9,6 +9,7 @@ import {
   FiLoader,
 } from "react-icons/fi";
 import { createDocument } from "../../../services/documentService";
+import DocumentModal from "../DocumentModal/DocumentModal";
 
 function UploadModal({
   isOpen,
@@ -17,22 +18,10 @@ function UploadModal({
   onDocumentCreated,
   onViewDocument,
 }) {
-  const SETORES = [
-    "Técnico",
-    "Normativo",
-    "Jurídico",
-    "Qualitativo",
-  ];
-
-  const NIVEIS_ACESSO = [
-    "Básico",
-    "Comercial",
-    "Militar",
-  ];
+  const NIVEIS_ACESSO = ["Básico", "Comercial", "Militar"];
 
   const INITIAL_FORM = {
     name: "",
-    sector: "",
     accessLevel: "Básico",
   };
 
@@ -47,6 +36,9 @@ function UploadModal({
     document: null,
   });
   const [isDragging, setIsDragging] = useState(false);
+
+  const [showDetails, setShowDetails] = useState(false);
+
   const fileInputRef = useRef(null);
 
   const resetForm = () => {
@@ -57,6 +49,7 @@ function UploadModal({
     setIsDragging(false);
     setIsSubmitting(false);
     setCreatedInfo({ fileName: "", sector: "", document: null });
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -68,15 +61,35 @@ function UploadModal({
   };
 
   const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
+    if (e.target === e.currentTarget && !showDetails) {
       handleClose();
     }
   };
 
   if (!isOpen) return null;
 
+  if (showDetails && createdInfo.document) {
+    return (
+      <DocumentModal
+        document={{
+          ...createdInfo.document,
+
+          etiquetas: createdInfo.document.etiquetas || [{ id_etiqueta: 999, nome: "NAO_CLASSIFICADO" }],
+          tipo_arquivo: createdInfo.document.tipo_arquivo || "pdf",
+          data: createdInfo.document.data || "fake.pdf",
+          acesso_permitido: true,
+        }}
+        loading={false}
+        error={null}
+        onClose={handleClose}
+        onRetry={() => {}}
+        onViewPdf={() => {}}
+      />
+    );
+  }
+
   const handleSelectFile = (selectedFile) => {
-    if (!selectedFile) return;
+    if (!selectedFile || isSubmitting) return;
 
     const isPdf =
       selectedFile.type === "application/pdf" ||
@@ -111,23 +124,17 @@ function UploadModal({
       return;
     }
 
-    if (!form.sector.trim()) {
-      setError("O setor responsável é obrigatório.");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       const created = await createDocumentFn({
         nome: form.name.trim(),
-        setor: form.sector.trim(),
         nivel: form.accessLevel,
         file,
       });
 
       setCreatedInfo({
         fileName: file.name,
-        sector: form.sector,
+        sector: created.setor || "Classificado pela IA",
         document: created,
       });
       setIsSuccess(true);
@@ -136,25 +143,16 @@ function UploadModal({
         onDocumentCreated(created);
       }
     } catch (err) {
-      const responseData = err?.response?.data;
-      const responseMessage =
-        typeof responseData === "string"
-          ? responseData
-          : responseData?.erro ||
-            Object.entries(responseData || {})
-              .map(([field, messages]) => {
-                const details = Array.isArray(messages)
-                  ? messages.join(", ")
-                  : messages;
-                return `${field}: ${details}`;
-              })
-              .join(" ");
-
-      setError(
-        responseMessage ||
-          err?.message ||
-          "Não foi possível cadastrar o documento."
-      );
+      const mensagem =
+        err?.response?.data?.erro ||
+        err?.response?.data?.nome?.[0] ||
+        err?.response?.data?.nivel?.[0] ||
+        err?.response?.data?.data?.[0] ||
+        err?.response?.data?.tipo_arquivo?.[0] ||
+        err?.message ||
+        "Não foi possível cadastrar o documento.";
+      alert(mensagem);
+      setError(mensagem);
     } finally {
       setIsSubmitting(false);
     }
@@ -174,8 +172,10 @@ function UploadModal({
   const handleViewDocument = () => {
     if (onViewDocument && createdInfo.document) {
       onViewDocument(createdInfo.document);
+      handleClose();
+      return;
     }
-    handleClose();
+    setShowDetails(true);
   };
 
   return (
@@ -294,7 +294,9 @@ function UploadModal({
 
             <form onSubmit={handleSubmit} className="upload-modal-form px-6 py-[22px] flex flex-col gap-[18px]">
               <div
-                className={`upload-dropzone border-2 border-dashed rounded-xl px-4 py-6 text-center cursor-pointer flex flex-col items-center justify-center transition-all duration-200 ${
+                className={`upload-dropzone border-2 border-dashed rounded-xl px-4 py-6 text-center flex flex-col items-center justify-center transition-all duration-200 ${
+                  isSubmitting ? "opacity-60 cursor-not-allowed pointer-events-none" : "cursor-pointer"
+                } ${
                   isDragging
                     ? "dragging bg-blue-100 border-blue-600 scale-[1.01]"
                     : file
@@ -303,7 +305,7 @@ function UploadModal({
                 }`}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  setIsDragging(true);
+                  if (!isSubmitting) setIsDragging(true);
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={(e) => {
@@ -313,7 +315,7 @@ function UploadModal({
                     handleSelectFile(e.dataTransfer.files[0]);
                   }
                 }}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => !isSubmitting && fileInputRef.current?.click()}
                 role="button"
                 tabIndex={0}
                 aria-label="Selecionar arquivo PDF"
@@ -348,7 +350,8 @@ function UploadModal({
                 <input
                   id="document-name"
                   type="text"
-                  className="upload-input w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all box-border"
+                  disabled={isSubmitting}
+                  className="upload-input w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all box-border disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-50"
                   placeholder="Ex.: Manual de manutenção"
                   value={form.name}
                   onChange={(e) =>
@@ -357,35 +360,15 @@ function UploadModal({
                 />
               </div>
 
-              <div className="upload-form-row grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="upload-form-group flex flex-col w-full">
-                  <label htmlFor="document-sector" className="upload-label block text-[13px] font-semibold text-slate-700 mb-1.5">
-                    Setor responsável *
-                  </label>
-                  <select
-                    id="document-sector"
-                    className="upload-select w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all box-border"
-                    value={form.sector}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, sector: e.target.value }))
-                    }
-                  >
-                    <option value="">Selecione um setor</option>
-                    {SETORES.map((setor) => (
-                      <option key={setor} value={setor}>
-                        {setor}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
+              <div className="upload-form-row grid grid-cols-1 gap-4">
                 <div className="upload-form-group flex flex-col w-full">
                   <label htmlFor="document-level" className="upload-label block text-[13px] font-semibold text-slate-700 mb-1.5">
                     Nível de acesso *
                   </label>
                   <select
                     id="document-level"
-                    className="upload-select w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all box-border"
+                    disabled={isSubmitting}
+                    className="upload-select w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all box-border disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-50"
                     value={form.accessLevel}
                     onChange={(e) =>
                       setForm((prev) => ({
@@ -413,8 +396,9 @@ function UploadModal({
               <div className="upload-modal-footer flex items-center justify-end gap-3 pt-3.5 border-t border-slate-100">
                 <button
                   type="button"
-                  className="upload-btn-cancel px-4.5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors bg-transparent border-none"
+                  className="upload-btn-cancel px-4.5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors bg-transparent border-none disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleClose}
+                  disabled={isSubmitting}
                 >
                   Cancelar
                 </button>

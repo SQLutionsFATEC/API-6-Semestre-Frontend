@@ -473,38 +473,45 @@ describe("fetchDocumentById", () => {
 });
 
 describe("createDocument", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("envia os dados do documento para a API e retorna a resposta", async () => {
-    const file = new File(["teste"], "doc.pdf", {
-      type: "application/pdf",
-    });
-    const createdDocument = {
+  it("envia multipart/form-data para /api/documentos/ com os campos corretos", async () => {
+    const file = new File(["teste"], "doc.pdf", { type: "application/pdf" });
+    const payload = {
       id_documento: 101,
+      tipo_arquivo: "pdf",
       nome: "doc.pdf",
       setor: "Técnico",
       nivel: "Básico",
-      tipo_arquivo: "pdf",
+      data_atualizacao: "2026-01-01T00:00:00Z",
+      etiquetas: [{ id_etiqueta: 1, nome: "Técnico" }],
     };
-    api.post.mockResolvedValue({ data: createdDocument });
+    api.post.mockResolvedValue({ data: payload });
 
     const result = await createDocument({
       nome: "doc.pdf",
       setor: "Técnico",
       nivel: "Básico",
       file,
-    })).resolves.toEqual(createdDocument);
+    });
 
-    expect(api.post).toHaveBeenCalledTimes(1);
-    const [url, formData] = api.post.mock.calls[0];
-    expect(url).toBe("/api/documentos/");
-    expect(formData.get("nome")).toBe("doc.pdf");
-    expect(formData.get("setor")).toBe("Técnico");
-    expect(formData.get("nivel")).toBe("Básico");
-    expect(formData.get("tipo_arquivo")).toBe("pdf");
-    expect(formData.get("data")).toBe(file);
+    expect(api.post).toHaveBeenCalledWith(
+      "/api/documentos/",
+      expect.any(FormData),
+      expect.objectContaining({
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 0,
+      })
+    );
+    expect(result).toEqual(payload);
+  });
+
+  it("propaga erro da API quando o cadastro falha", async () => {
+    const file = new File(["teste"], "doc.pdf", { type: "application/pdf" });
+    const erro = { response: { data: { erro: "Falha no processamento" } } };
+    api.post.mockRejectedValue(erro);
+
+    await expect(
+      createDocument({ nome: "doc.pdf", setor: "Técnico", nivel: "Básico", file })
+    ).rejects.toEqual(erro);
   });
 
   it("propaga erro da API quando o cadastro falha", async () => {
