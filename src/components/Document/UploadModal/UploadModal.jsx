@@ -9,13 +9,12 @@ import {
   FiLoader,
 } from "react-icons/fi";
 import { createDocument } from "../../../services/documentService";
-
+import DocumentModal from "../DocumentModal/DocumentModal"; 
 function UploadModal({
   isOpen,
   onClose,
   createDocumentFn = createDocument,
   onDocumentCreated,
-  onViewDocument,
 }) {
   const NIVEIS_ACESSO = ["Básico", "Comercial", "Militar"];
 
@@ -31,6 +30,9 @@ function UploadModal({
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdInfo, setCreatedInfo] = useState({ fileName: "", sector: "", document: null });
   const [isDragging, setIsDragging] = useState(false);
+  
+  const [showDetails, setShowDetails] = useState(false);
+
   const fileInputRef = useRef(null);
 
   const resetForm = () => {
@@ -41,6 +43,7 @@ function UploadModal({
     setIsDragging(false);
     setIsSubmitting(false);
     setCreatedInfo({ fileName: "", sector: "", document: null });
+    setShowDetails(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -59,37 +62,38 @@ function UploadModal({
 
   if (!isOpen) return null;
 
+    return (
+      <DocumentModal
+        document={createdInfo.document}
+        loading={false}
+        error={null}
+        onClose={handleClose}
+        onRetry={() => {}}
+        onViewPdf={() => {}}
+      />
+    );
+  }
+
   const handleSelectFile = (selectedFile) => {
     if (!selectedFile || isSubmitting) return;
-
-    const isPdf =
-      selectedFile.type === "application/pdf" ||
-      selectedFile.name.toLowerCase().endsWith(".pdf");
-
+    const isPdf = selectedFile.type === "application/pdf" || selectedFile.name.toLowerCase().endsWith(".pdf");
     if (!isPdf) {
       setFile(null);
       setError("Apenas arquivos no formato PDF são permitidos.");
       return;
     }
-
     setFile(selectedFile);
     setError("");
-
-    setForm((prev) => ({
-      ...prev,
-      name: selectedFile.name,
-    }));
+    setForm((prev) => ({ ...prev, name: selectedFile.name }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
     if (!file) {
       setError("Cadastro sem documento anexado não é permitido.");
       return;
     }
-
     if (!form.name.trim()) {
       setError("O nome do documento é obrigatório.");
       return;
@@ -106,7 +110,13 @@ function UploadModal({
       setCreatedInfo({
         fileName: file.name,
         sector: created.setor || "Classificado pela IA",
-        document: created,
+        document: {
+          ...created,
+          etiquetas: created.etiquetas || [{ id_etiqueta: 999, nome: created.setor || "Sem setor" }],
+          tipo_arquivo: created.tipo_arquivo || "pdf",
+          data: created.data || "fake.pdf",
+          acesso_permitido: true
+        },
       });
       setIsSuccess(true);
 
@@ -114,14 +124,7 @@ function UploadModal({
         onDocumentCreated(created);
       }
     } catch (err) {
-      const mensagem =
-        err?.response?.data?.erro ||
-        err?.response?.data?.nome?.[0] ||
-        err?.response?.data?.nivel?.[0] ||
-        err?.response?.data?.data?.[0] ||
-        err?.response?.data?.tipo_arquivo?.[0] ||
-        err?.message ||
-        "Não foi possível cadastrar o documento.";
+      const mensagem = err?.response?.data?.erro || err?.message || "Não foi possível cadastrar o documento.";
       alert(mensagem);
       setError(mensagem);
     } finally {
@@ -141,9 +144,7 @@ function UploadModal({
   };
 
   const handleViewDocument = () => {
-    if (onViewDocument && createdInfo.document) {
-      onViewDocument(createdInfo.document);
-    }
+    setShowDetails(true);
   };
 
   return (
