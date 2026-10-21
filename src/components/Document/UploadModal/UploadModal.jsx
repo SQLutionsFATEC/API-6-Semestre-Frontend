@@ -76,7 +76,7 @@ function UploadModal({
   if (!isOpen) return null;
 
   const handleSelectFile = (selectedFile) => {
-    if (!selectedFile) return;
+    if (!selectedFile || isSubmitting) return;
 
     const isPdf =
       selectedFile.type === "application/pdf" ||
@@ -294,7 +294,9 @@ function UploadModal({
 
             <form onSubmit={handleSubmit} className="upload-modal-form px-6 py-[22px] flex flex-col gap-[18px]">
               <div
-                className={`upload-dropzone border-2 border-dashed rounded-xl px-4 py-6 text-center cursor-pointer flex flex-col items-center justify-center transition-all duration-200 ${
+                className={`upload-dropzone border-2 border-dashed rounded-xl px-4 py-6 text-center flex flex-col items-center justify-center transition-all duration-200 ${
+                  isSubmitting ? "opacity-60 cursor-not-allowed pointer-events-none" : "cursor-pointer"
+                } ${
                   isDragging
                     ? "dragging bg-blue-100 border-blue-600 scale-[1.01]"
                     : file
@@ -303,7 +305,7 @@ function UploadModal({
                 }`}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  setIsDragging(true);
+                  if (!isSubmitting) setIsDragging(true);
                 }}
                 onDragLeave={() => setIsDragging(false)}
                 onDrop={(e) => {
@@ -313,7 +315,7 @@ function UploadModal({
                     handleSelectFile(e.dataTransfer.files[0]);
                   }
                 }}
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => !isSubmitting && fileInputRef.current?.click()}
                 role="button"
                 tabIndex={0}
                 aria-label="Selecionar arquivo PDF"
@@ -348,7 +350,8 @@ function UploadModal({
                 <input
                   id="document-name"
                   type="text"
-                  className="upload-input w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all box-border"
+                  disabled={isSubmitting}
+                  className="upload-input w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all box-border disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-50"
                   placeholder="Ex.: Manual de manutenção"
                   value={form.name}
                   onChange={(e) =>
@@ -385,7 +388,8 @@ function UploadModal({
                   </label>
                   <select
                     id="document-level"
-                    className="upload-select w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all box-border"
+                    disabled={isSubmitting}
+                    className="upload-select w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm text-slate-800 bg-white placeholder-slate-400 outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-600/15 transition-all box-border disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-50"
                     value={form.accessLevel}
                     onChange={(e) =>
                       setForm((prev) => ({
@@ -413,8 +417,9 @@ function UploadModal({
               <div className="upload-modal-footer flex items-center justify-end gap-3 pt-3.5 border-t border-slate-100">
                 <button
                   type="button"
-                  className="upload-btn-cancel px-4.5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors bg-transparent border-none"
+                  className="upload-btn-cancel px-4.5 py-2.5 text-sm font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors bg-transparent border-none disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleClose}
+                  disabled={isSubmitting}
                 >
                   Cancelar
                 </button>

@@ -199,7 +199,6 @@ describe("UploadModal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
 
     await waitFor(() => {
-
       expect(mockCreate).toHaveBeenCalledWith({
         nome: "Manual de manutenção.pdf",
         nivel: "Básico",
@@ -290,5 +289,30 @@ describe("UploadModal", () => {
     const closeBtn = screen.getByRole("button", { name: "Fechar" });
     fireEvent.click(closeBtn);
     expect(handleClose).toHaveBeenCalledTimes(2);
+  });
+
+  it("desabilita os campos de entrada durante o envio (isSubmitting)", async () => {
+    const mockCreate = vi.fn().mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 1000)));
+
+    render(
+      <UploadModal isOpen={true} onClose={vi.fn()} createDocumentFn={mockCreate} />
+    );
+
+    const fileInput = document.querySelector(".upload-file-input");
+    fireEvent.change(fileInput, {
+      target: { files: [new File(["pdf"], "doc.pdf", { type: "application/pdf" })] },
+    });
+
+    const nameInput = screen.getByLabelText(/Nome do documento/i);
+    const levelSelect = screen.getByLabelText(/Nível de acesso/i);
+    expect(nameInput).not.toBeDisabled();
+    expect(levelSelect).not.toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cadastrar documento" }));
+
+    await waitFor(() => {
+      expect(nameInput).toBeDisabled();
+      expect(levelSelect).toBeDisabled();
+    });
   });
 });
