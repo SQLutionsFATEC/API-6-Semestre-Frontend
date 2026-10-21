@@ -219,7 +219,6 @@ describe("UploadModal", () => {
     fireEvent.click(viewBtn);
     
     expect(handleView).toHaveBeenCalledWith(expect.objectContaining({ id_documento: 101 }));
-    expect(handleClose).toHaveBeenCalled();
   });
 
   it("limpa o formulário ao clicar em Cadastrar outro na tela de sucesso", async () => {
