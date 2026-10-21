@@ -175,7 +175,6 @@ function UploadModal({
     if (onViewDocument && createdInfo.document) {
       onViewDocument(createdInfo.document);
     }
-    handleClose();
   };
 
   return (
