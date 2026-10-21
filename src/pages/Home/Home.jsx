@@ -15,6 +15,7 @@ import FilterSidebar from "../../components/FilterSidebar/FilterSidebar";
 import Pagination from "../../components/Pagination/Pagination";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import UserModal from "../../components/UserModal/UserModal";
+import UploadModal from "../../components/Document/UploadModal/UploadModal";
 
 import {
   fetchDocumentById,
@@ -64,10 +65,12 @@ function Home({ documentsRefreshKey = 0 }) {
   const [pdfViewerDocument, setPdfViewerDocument] = useState(null);
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(MOCK_CURRENT_USER);
 
   // Invalida respostas antigas quando outra requisição de detalhes começa
   // ou quando o modal de detalhes é fechado.
+  const [refreshKey, setRefreshKey] = useState(0);
   const detailRequestId = useRef(0);
 
   const handleCloseFilters = useCallback(() => {
@@ -140,6 +143,7 @@ function Home({ documentsRefreshKey = 0 }) {
     filters.tipo,
     filters.data_atualizacao,
     documentsRefreshKey,
+    refreshKey,
   ]);
 
   function handleSearch(value) {
@@ -444,6 +448,18 @@ function Home({ documentsRefreshKey = 0 }) {
         user={currentUser}
         onUserUpdated={handleUserUpdated}
         onUserDeleted={handleUserDeleted}
+      />
+
+      <UploadModal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onDocumentCreated={() => {
+          setRefreshKey((prev) => prev + 1);
+        }}
+        onViewDocument={(documentoCriado) => {
+          setIsUploadModalOpen(false);
+          handleOpenDocument(documentoCriado);
+        }}
       />
     </div>
   );

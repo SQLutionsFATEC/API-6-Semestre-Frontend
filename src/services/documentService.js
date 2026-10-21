@@ -1,4 +1,3 @@
-
 import api from "./api";
 
 function simularAcessoPermitido(doc, fallbackId) {
@@ -199,7 +198,10 @@ export async function createDocument({
     formData.append("data", file);
   }
 
-  const response = await api.post("/api/documentos/", formData);
+  const response = await api.post("/api/documentos/", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+    timeout: 0,
+  });
 
   return response.data;
 }
