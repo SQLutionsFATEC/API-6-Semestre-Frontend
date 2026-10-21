@@ -170,23 +170,20 @@ describe("UploadModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("realiza o upload com sucesso, chama onDocumentCreated, onViewDocument e exibe o modal de feedback", async () => {
+  it("realiza o upload com sucesso, chama onDocumentCreated e exibe o modal de detalhes", async () => {
     const mockCreate = vi.fn().mockResolvedValue({
       id_documento: 101,
       nome: "Manual de manutenção.pdf",
       setor: "Técnico",
     });
     const handleCreated = vi.fn();
-    const handleView = vi.fn();
-    const handleClose = vi.fn();
 
     render(
       <UploadModal
         isOpen={true}
-        onClose={handleClose}
+        onClose={vi.fn()}
         createDocumentFn={mockCreate}
         onDocumentCreated={handleCreated}
-        onViewDocument={handleView}
       />
     );
 
@@ -211,14 +208,13 @@ describe("UploadModal", () => {
       });
     });
 
+
     expect(await screen.findByText("Documento cadastrado com sucesso!")).toBeInTheDocument();
     
-    expect(screen.getByText("Técnico")).toBeInTheDocument();
-
     const viewBtn = screen.getByRole("button", { name: "Ver documento" });
     fireEvent.click(viewBtn);
     
-    expect(handleView).toHaveBeenCalledWith(expect.objectContaining({ id_documento: 101 }));
+    expect(await screen.findByText("Informações do documento")).toBeInTheDocument();
   });
 
   it("limpa o formulário ao clicar em Cadastrar outro na tela de sucesso", async () => {
