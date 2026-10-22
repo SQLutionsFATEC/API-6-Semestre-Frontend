@@ -1,303 +1,470 @@
-import {
-  FiEye,
-  FiLock,
-  FiCheckCircle,
-  FiX,
-  FiInfo,
-  FiTag,
-  FiFileText,
-  FiCalendar,
-  FiShield,
-  FiBriefcase,
-  FiFile,
-  FiEdit3,
-} from "react-icons/fi";
+import { FiBriefcase } from "react-icons/fi";
 import { formatarSetor } from "../../../utils/documentFormatters";
 import "./DocumentModal.css";
 
-function formatDate(value) {
-  if (!value) return "-";
+function formatDate(dateValue) {
+  if (
+    dateValue === null ||
+    dateValue === undefined ||
+    dateValue === ""
+  ) {
+    return "-";
+  }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(dateValue);
+  }
 
   return date.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+    timeZone: "UTC",
   });
 }
 
-function DocumentModal({ document, onClose, onViewPdf, loading, error, onRetry }) {
-  const handleOverlayClick = (event) => {
-    if (event.target === event.currentTarget) {
-      onClose();
-    }
-  };
-
-  const handleKeyDown = (event) => {
-    if (event.key === "Escape") {
-      onClose();
-    }
-  };
-
-  if (loading || error) {
-    return (
-      <div
-        className="document-modal-overlay"
-        onClick={handleOverlayClick}
-        onKeyDown={handleKeyDown}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="document-modal">
-          <button className="modal-close cursor-pointer" onClick={onClose} aria-label="Fechar">
-            <FiX size={18} aria-hidden="true" />
-          </button>
-
-          {loading ? (
-            <div className="modal-state-container">
-              <p role="status">Carregando detalhes do documento...</p>
-            </div>
-          ) : (
-            <div role="alert" className="modal-error-container">
-              <p>{error}</p>
-              <button className="modal-view-button cursor-pointer" onClick={onRetry}>
-                Tentar novamente
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
+function formatValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return "Não informado";
   }
 
-  if (!document) return null;
+  return value;
+}
 
-  const tags = document.etiquetas || [];
+function getTags(document) {
+  if (Array.isArray(document?.etiquetas)) {
+    return document.etiquetas;
+  }
+
+  if (Array.isArray(document?.tags)) {
+    return document.tags;
+  }
+
+  return [];
+}
+
+function getTagName(tag) {
+  if (typeof tag === "string") {
+    return tag;
+  }
+
+  if (tag && typeof tag === "object") {
+    return tag.nome ?? tag.name ?? tag.etiqueta ?? "";
+  }
+
+  return "";
+}
+
+function getFileUrl(document) {
+  const file = document?.arquivo;
+
+  return (
+    document?.arquivo_url ??
+    document?.url_arquivo ??
+    (typeof file === "object" ? file?.url : undefined) ??
+    (typeof file === "string" ? file : undefined) ??
+    document?.file_url ??
+    document?.url ??
+    document?.data ??
+    ""
+  );
+}
+
+function getDocumentName(document) {
+  return (
+    document?.nome ??
+    document?.titulo ??
+    document?.nome_arquivo ??
+    document?.arquivo_nome ??
+    "Documento sem título"
+  );
+}
+
+function getFileType(document) {
+  const type = document?.tipo_arquivo ?? document?.extensao;
+
+  if (
+    type === null ||
+    type === undefined ||
+    String(type).trim() === ""
+  ) {
+    return "ARQUIVO";
+  }
+
+  return String(type).replace(/^\./, "").toUpperCase();
+}
+
+export default function DocumentModal({
+  document,
+  onClose,
+  onViewPdf,
+  onView,
+  onEdit,
+  loading = false,
+  error = null,
+  onRetry,
+}) {
+  if (!document) {
+    return null;
+  }
+
+  const tags = getTags(document);
+  const fileUrl = getFileUrl(document);
+  const documentName = getDocumentName(document);
+  const accessRestricted = document.acesso_permitido === false;
+
+  const canView = Boolean(fileUrl);
+  const canEdit = !accessRestricted;
+
+  function handleOverlayClick(event) {
+    if (event.target === event.currentTarget) {
+      onClose?.();
+    }
+  }
+
+  function handleView() {
+    if (!canView || loading || error) {
+      return;
+    }
+
+    if (typeof onViewPdf === "function") {
+      onViewPdf(document);
+      return;
+    }
+
+    if (accessRestricted) {
+      return;
+    }
+
+    if (typeof onView === "function") {
+      onView({
+        ...document,
+        arquivo_url: fileUrl,
+      });
+      return;
+    }
+
+    window.open(fileUrl, "_blank", "noopener,noreferrer");
+  }
+
+  function handleEdit() {
+    if (!canEdit || typeof onEdit !== "function") {
+      return;
+    }
+
+    onEdit(document);
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === "Escape") {
+      onClose?.();
+    }
+  }
 
   return (
     <div
       className="document-modal-overlay"
-      onClick={handleOverlayClick}
-      onKeyDown={handleKeyDown}
       role="dialog"
       aria-modal="true"
+      aria-label="Detalhes do documento"
+      onClick={handleOverlayClick}
+      onKeyDown={handleKeyDown}
     >
       <div className="document-modal">
-        {/* CABEÇALHO */}
         <header className="modal-top">
           <div className="modal-top-texts">
             <span className="modal-label">Arquivo</span>
-            <div className="modal-title-row">
-              <h2 className="modal-code">{document.nome}</h2>
-              <span className="modal-pdf-badge">
-                <FiFileText size={14} className="badge-icon" />
-                {document.tipo_arquivo?.toUpperCase() || "ARQUIVO"}
-              </span>
-              {document.acesso_permitido === false ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
-                  <FiLock size={12} className="text-rose-600" />
-                  Acesso Bloqueado
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <FiCheckCircle size={12} className="text-emerald-600" />
-                  Acesso Liberado
-                </span>
-              )}
-            </div>
+
+            {!loading && !error && (
+              <>
+                <div className="modal-title-row">
+                  <h2 className="modal-code">{documentName}</h2>
+
+                  <span className="modal-pdf-badge">
+                    {getFileType(document)}
+                  </span>
+                </div>
+
+                {accessRestricted ? (
+                  <span className="access-status access-restricted">
+                    Acesso Bloqueado
+                  </span>
+                ) : (
+                  <span className="access-status access-allowed">
+                    Acesso Liberado
+                  </span>
+                )}
+              </>
+            )}
           </div>
 
-          <button className="modal-close cursor-pointer" onClick={onClose} aria-label="Fechar">
-            <FiX size={18} aria-hidden="true" />
+          <button
+            type="button"
+            className="modal-close cursor-pointer"
+            aria-label="Fechar"
+            onClick={onClose}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </header>
 
-        {/* 4 CARDS DE ESTATÍSTICA (TOP) */}
-        <div className="modal-stats-grid">
-          <div className="modal-stat-card">
-            <div className="stat-icon-badge stat-blue">
-              <FiBriefcase size={18} />
-            </div>
-            <div className="stat-info">
-              <span className="stat-label">Setor</span>
-              <strong className="stat-value">{formatarSetor(document)}</strong>
-            </div>
+        {loading ? (
+          <div className="modal-state" role="status">
+            Carregando detalhes do documento...
           </div>
+        ) : error ? (
+          <div className="modal-state modal-error">
+            <p role="alert">{error}</p>
 
-          <div className="modal-stat-card">
-            <div className={`stat-icon-badge ${document.acesso_permitido === false ? "stat-red" : "stat-purple"}`}>
-              {document.acesso_permitido === false ? (
-                <FiLock size={18} />
-              ) : (
-                <FiShield size={18} />
-              )}
-            </div>
-            <div className="stat-info">
-              <span className="stat-label">Nível de acesso</span>
-              <div className="flex items-center gap-2 flex-wrap">
-                <strong className="stat-value">{document.nivel || "-"}</strong>
+            {typeof onRetry === "function" && (
+              <button
+                type="button"
+                className="modal-retry-button"
+                onClick={onRetry}
+              >
+                Tentar novamente
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            {accessRestricted && (
+              <div className="access-warning" role="status">
+                Documento com Acesso Restrito
               </div>
-            </div>
-          </div>
+            )}
 
-          <div className="modal-stat-card">
-            <div className="stat-icon-badge stat-blue">
-              <FiCalendar size={18} />
-            </div>
-            <div className="stat-info">
-              <span className="stat-label">Atualizado em</span>
-              <strong className="stat-value">{formatDate(document.data_atualizacao)}</strong>
-            </div>
-          </div>
+            <div className="modal-stats-grid">
+              <div className="modal-stat-card">
+                <div
+                  className="stat-icon-badge stat-blue"
+                  aria-hidden="true"
+                >
+                  <FiBriefcase size={18} />
+                </div>
 
-          <div className="modal-stat-card">
-            <div className="stat-icon-badge stat-red">
-              <FiFile size={18} />
-            </div>
-            <div className="stat-info">
-              <span className="stat-label">Tipo</span>
-              <strong className="stat-value">{document.tipo_arquivo?.toUpperCase() || "-"}</strong>
-            </div>
-          </div>
-        </div>
-
-        {/* AVISO DE ACESSO BLOQUEADO SE APLICÁVEL */}
-        {document.acesso_permitido === false && (
-          <div className="mb-4 flex items-center gap-3 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 text-sm">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-rose-100 text-rose-700 shrink-0">
-              <FiLock size={18} />
-            </div>
-            <div className="flex-1 text-left">
-              <strong className="block font-semibold text-rose-900">Documento com Acesso Restrito</strong>
-              <span className="text-xs text-rose-700">
-                Seu usuário não possui permissão para visualizar o conteúdo deste documento.
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* SEÇÃO PRINCIPAL (2 COLUNAS) */}
-        <div className="modal-body-grid">
-          {/* COLUNA ESQUERDA: Informações + Tags */}
-          <div className="modal-left-col">
-            <div className="modal-card-box">
-              <div className="box-header">
-                <FiInfo size={16} className="box-header-icon" />
-                <span className="box-title">Informações do documento</span>
-              </div>
-              <p className="document-description">
-                {document.descricao ||
-                  document.contexto ||
-                  "Documento arquivado no repositório institucional da IAzimute, validado para consultas e rotinas operacionais de acordo com a política interna de conformidade."}
-              </p>
-            </div>
-
-            <div className="modal-card-box tags-box-wrapper">
-              <div className="box-header">
-                <FiTag size={16} className="box-header-icon" />
-                <span className="box-title">Tags</span>
+                <div className="stat-info">
+                  <span className="stat-label">Setor</span>
+                  <strong className="stat-value">
+                    {formatarSetor(document)}
+                  </strong>
+                </div>
               </div>
 
-              <div className="tags-content">
-                {tags.length > 0 ? (
-                  <div className="tags-list">
-                    {tags.map((tag) => (
-                      <span className="document-tag" key={tag.id_etiqueta}>
-                        {tag.nome}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="tags-empty-state">
-                    <div className="tags-empty-icon">
-                      <FiTag size={16} />
-                    </div>
-                    <span className="tags-empty">Nenhuma etiqueta atribuida.</span>
-                    <span className="tags-empty-subtitle">
-                      Este documento ainda não possui etiquetas.
-                    </span>
-                  </div>
-                )}
+              <div className="modal-stat-card">
+                <div
+                  className="stat-icon-badge stat-purple"
+                  aria-hidden="true"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 6v6l4 2" />
+                  </svg>
+                </div>
+
+                <div className="stat-info">
+                  <span className="stat-label">
+                    Última atualização
+                  </span>
+                  <strong className="stat-value">
+                    {formatDate(
+                      document.data_atualizacao ??
+                        document.data_modificacao ??
+                        document.atualizado_em
+                    )}
+                  </strong>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* COLUNA DIREITA: Pré-visualização */}
-          <div className="modal-right-col">
-            <div className="modal-card-box preview-box">
-              <div className="box-header">
-                <FiFileText size={16} className="box-header-icon" />
-                <span className="box-title">Pré-visualização</span>
+              <div className="modal-stat-card">
+                <div
+                  className="stat-icon-badge stat-green"
+                  aria-hidden="true"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect
+                      x="3"
+                      y="11"
+                      width="18"
+                      height="11"
+                      rx="2"
+                    />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </div>
+
+                <div className="stat-info">
+                  <span className="stat-label">
+                    Nível de acesso
+                  </span>
+                  <strong className="stat-value">
+                    {formatValue(document.nivel)}
+                  </strong>
+                </div>
               </div>
 
-              <div className="preview-sheet-wrapper">
-                <div className="preview-sheet">
-                  <div className="preview-sheet-top">
-                    <div className="preview-pdf-pill">
-                      <FiFileText size={14} />
-                      <span>{document.tipo_arquivo?.toUpperCase() || "PDF"}</span>
-                    </div>
-                    <div className="preview-watermark-logo">IA</div>
-                  </div>
+              <div className="modal-stat-card">
+                <div
+                  className="stat-icon-badge stat-orange"
+                  aria-hidden="true"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M20.59 13.41 11 3.83V3H4v7h.83l9.58 9.59a2 2 0 0 0 2.83 0l3.35-3.35a2 2 0 0 0 0-2.83Z" />
+                    <circle cx="7.5" cy="6.5" r=".5" />
+                  </svg>
+                </div>
 
-                  <div className="preview-lines">
-                    <div className="preview-line line-lg"></div>
-                    <div className="preview-line line-md"></div>
-                    <div className="preview-line line-sm"></div>
-                    <div className="preview-line line-md"></div>
-                  </div>
-
-                  <div className="preview-chart-mock">
-                    <div className="preview-bar bar-1"></div>
-                    <div className="preview-bar bar-2"></div>
-                    <div className="preview-bar bar-3"></div>
-                    <div className="preview-bar bar-4"></div>
-                  </div>
+                <div className="stat-info">
+                  <span className="stat-label">Etiquetas</span>
+                  <strong className="stat-value">
+                    {tags.length}
+                  </strong>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* RODAPÉ COM AÇÕES */}
+            <section className="modal-section">
+              <h3 className="modal-section-title">Descrição</h3>
+
+              <p className="document-description">
+                {formatValue(
+                  document.descricao ??
+                    document.observacao ??
+                    document.observacoes
+                )}
+              </p>
+            </section>
+
+            <section className="modal-section">
+              <h3 className="modal-section-title">
+                Etiquetas atribuídas
+              </h3>
+
+              <div className="document-tags">
+                {tags.length > 0 ? (
+                  tags.map((tag, index) => {
+                    const tagName = getTagName(tag);
+
+                    if (!tagName) {
+                      return null;
+                    }
+
+                    const tagKey =
+                      typeof tag === "object" && tag !== null
+                        ? tag.id ?? tag.id_etiqueta ?? tagName
+                        : tagName;
+
+                    return (
+                      <span
+                        className="document-tag"
+                        key={`${tagKey}-${index}`}
+                      >
+                        {tagName}
+                      </span>
+                    );
+                  })
+                ) : (
+                  <span className="tags-empty">
+                    Nenhuma etiqueta atribuída.
+                  </span>
+                )}
+              </div>
+            </section>
+          </>
+        )}
+
         <footer className="modal-actions">
           <button
             type="button"
-            className={`modal-view-button cursor-pointer ${document.acesso_permitido === false ? "modal-view-locked" : ""}`}
-            disabled={!document.data && document.acesso_permitido !== false}
-            onClick={() => onViewPdf(document)}
+            className={`modal-view-button cursor-pointer ${
+              !canView || loading || Boolean(error) ? "disabled" : ""
+            }`}
             aria-label="Visualizar"
+            disabled={!canView || loading || Boolean(error)}
+            onClick={handleView}
           >
-            {document.acesso_permitido === false ? (
-              <FiLock size={17} aria-hidden="true" />
-            ) : (
-              <FiEye size={17} aria-hidden="true" />
-            )}
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
             Visualizar
           </button>
 
           <button
             type="button"
-            className={`modal-edit-button ${
-              document.acesso_permitido === false ? "opacity-50 cursor-not-allowed!" : "cursor-pointer"
-            }`}
-            disabled={document.acesso_permitido === false}
-            onClick={() => console.log("Editar documento")}
-            title={document.acesso_permitido === false ? "Edição bloqueada" : "Editar documento"}
+            className="modal-edit-button cursor-pointer"
+            title={canEdit ? "Editar documento" : "Edição bloqueada"}
+            aria-label="Editar documento"
+            disabled={!canEdit}
+            onClick={handleEdit}
           >
-            {document.acesso_permitido === false ? (
-              <FiLock size={15} aria-hidden="true" />
-            ) : (
-              <FiEdit3 size={15} />
-            )}
-            Editar documento
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+            </svg>
+            Editar
           </button>
         </footer>
       </div>
     </div>
   );
 }
-
-export default DocumentModal;

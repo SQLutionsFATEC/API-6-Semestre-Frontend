@@ -5,6 +5,7 @@ import Home from "../../pages/Home/Home";
 import {
   fetchDocumentById,
   fetchDocuments,
+  updateDocument,
 } from "../../services/documentService";
 
 vi.mock("../../services/documentService", () => ({
@@ -13,6 +14,7 @@ vi.mock("../../services/documentService", () => ({
   createDocument: vi.fn(),
   fetchAllAvailableTags: vi.fn(),
   fetchTags: vi.fn(),
+  updateDocument: vi.fn(),
 }));
 
 vi.mock("pdfjs-dist", () => ({
@@ -92,6 +94,7 @@ function openFirstDocument() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({});
 
   vi.mocked(fetchDocuments).mockResolvedValue(documentsPage);
@@ -107,22 +110,23 @@ describe("Home", () => {
   it("carrega e exibe a lista de documentos", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     expect(screen.getByText("Ata de reuniao.pdf")).toBeInTheDocument();
-    expect(fetchDocuments).toHaveBeenCalledWith({
-      nome: "",
-      contexto: "",
-      page: 1,
-      tags: [],
-      tipo: [],
-      data_atualizacao: "",
+
+    await waitFor(() => {
+      expect(fetchDocuments).toHaveBeenCalledWith({
+        nome: "",
+        contexto: "",
+        page: 1,
+        tags: [],
+        tipo: [],
+        data_atualizacao: "",
+      });
     });
   });
 
-  it("busca novamente a lista após o cadastro de um documento", async () => {
+  it("busca novamente a lista quando documentsRefreshKey muda", async () => {
     const { rerender } = render(<Home documentsRefreshKey={0} />);
 
     await waitFor(() => {
@@ -141,26 +145,28 @@ describe("Home", () => {
 
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Erro ao carregar")).toBeInTheDocument();
-    });
+    expect(await screen.findByText("Erro ao carregar")).toBeInTheDocument();
 
     expect(
       screen.getByText("Não foi possível carregar os documentos.")
     ).toBeInTheDocument();
-    expect(screen.queryByText("Manual do sistema.pdf")).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByText("Manual do sistema.pdf")
+    ).not.toBeInTheDocument();
   });
 
   it("busca novamente ao digitar na barra de pesquisa", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
-    fireEvent.change(screen.getByPlaceholderText("Pesquise por nome, tag, conteúdo ou autor..."), {
-      target: { value: "manual" },
-    });
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "Pesquise por nome, tag, conteúdo ou autor..."
+      ),
+      { target: { value: "manual" } }
+    );
 
     await waitFor(() => {
       expect(fetchDocuments).toHaveBeenLastCalledWith({
@@ -177,15 +183,16 @@ describe("Home", () => {
   it("indica no botão quando há filtros ativos", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
+
     fireEvent.click(
       screen.getByRole("button", { name: "Selecionar setor/tipo" })
     );
+
     fireEvent.click(screen.getByLabelText("Técnico"));
+
     fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
 
     expect(
@@ -196,9 +203,33 @@ describe("Home", () => {
   it("mantém o painel aberto ao limpar os filtros", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Selecionar setor/tipo" })
+    );
+
+    fireEvent.click(screen.getByLabelText("Técnico"));
+
+    fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Filtros: 1 ativo" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("button", { name: "Selecionar setor/tipo" })
+    ).toBeInTheDocument();
+  });
+
+  it("limpa filtros aplicados e refaz a busca com valores padrão", async () => {
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
 
     fireEvent.click(screen.getByRole("button", { name: "Filtros" }));
     fireEvent.click(
@@ -207,21 +238,26 @@ describe("Home", () => {
     fireEvent.click(screen.getByLabelText("Técnico"));
     fireEvent.click(screen.getByRole("button", { name: "Aplicar filtros" }));
 
+    await waitFor(() => {
+      expect(fetchDocuments).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tipo: ["tecnico"] })
+      );
+    });
+
     fireEvent.click(screen.getByRole("button", { name: "Filtros: 1 ativo" }));
     fireEvent.click(screen.getByRole("button", { name: "Limpar filtros" }));
 
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Selecionar setor/tipo" })
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fetchDocuments).toHaveBeenLastCalledWith(
+        expect.objectContaining({ tipo: [] })
+      );
+    });
   });
 
-  it("muda de pagina pela paginacao", async () => {
+  it("muda de página pela paginação", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     fireEvent.click(screen.getByRole("button", { name: "Próxima página" }));
 
@@ -237,80 +273,107 @@ describe("Home", () => {
     });
   });
 
-  it("ignora mudanca de pagina fora dos limites", async () => {
+  it("ignora mudança de página fora dos limites", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     const callsBeforeClick = fetchDocuments.mock.calls.length;
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Página anterior" })
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Página anterior" }));
 
     expect(fetchDocuments).toHaveBeenCalledTimes(callsBeforeClick);
   });
 
-  it("abre o modal com os detalhes do documento selecionado ao clicar no cartão", async () => {
+  it("abre os detalhes do documento selecionado ao clicar no cartão", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     openFirstDocument();
 
     await waitFor(() => {
       expect(getModal()).toBeInTheDocument();
+      expect(screen.getByText("Tecnico")).toBeInTheDocument();
     });
 
     expect(fetchDocumentById).toHaveBeenCalledWith(1);
-    expect(screen.getByText("Tecnico")).toBeInTheDocument();
   });
 
   it("abre o PDF no visualizador ao clicar no botão do cartão", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Visualizar" })[0]
+    );
 
-    expect(screen.getByRole("dialog", { name: /Manual do sistema.pdf/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", {
+        name: /Manual do sistema.pdf/,
+      })
+    ).toBeInTheDocument();
+
     expect(await screen.findByLabelText("Página 1")).toBeInTheDocument();
+
     expect(fetchDocumentById).not.toHaveBeenCalled();
 
     const pdfjs = await import("pdfjs-dist");
+
     expect(pdfjs.getDocument).toHaveBeenCalledWith({
       url: "http://localhost:8000/media/documentos/manual.pdf",
     });
   });
 
-  it("limita o zoom do visualizador entre 50% e 400% e permite fechá-lo", async () => {
+  it("mostra console.log ao tentar visualizar documento sem URL", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Visualizar" })[1]
+    );
+
+    await waitFor(() => {
+      expect(logSpy).toHaveBeenCalledWith(
+        "PDF ainda não disponível:",
+        "Ata de reuniao.pdf"
+      );
+    });
+  });
+
+  it("limita o zoom entre 50% e 400% e permite fechar o visualizador", async () => {
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Visualizar" })[0]
+    );
 
     const zoomIn = screen.getByRole("button", { name: "Aumentar zoom" });
-    for (let index = 0; index < 20; index += 1) fireEvent.click(zoomIn);
+
+    for (let index = 0; index < 20; index += 1) {
+      fireEvent.click(zoomIn);
+    }
 
     expect(screen.getByText("400%")).toBeInTheDocument();
     expect(zoomIn).toBeDisabled();
 
     const zoomOut = screen.getByRole("button", { name: "Diminuir zoom" });
-    for (let index = 0; index < 20; index += 1) fireEvent.click(zoomOut);
+
+    for (let index = 0; index < 20; index += 1) {
+      fireEvent.click(zoomOut);
+    }
 
     expect(screen.getByText("50%")).toBeInTheDocument();
     expect(zoomOut).toBeDisabled();
 
     fireEvent.click(screen.getByLabelText("Fechar visualização"));
+
     expect(
       screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
     ).not.toBeInTheDocument();
@@ -319,56 +382,59 @@ describe("Home", () => {
   it("fecha ao clicar fora e bloqueia o menu de contexto no documento", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getAllByRole("button", { name: "Visualizar" })[0]);
+    await screen.findByText("Manual do sistema.pdf");
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Visualizar" })[0]
+    );
+
     await screen.findByLabelText("Página 1");
 
-    const viewerContent = screen.getByLabelText("Página 1").parentElement.parentElement;
+    const viewerContent = screen
+      .getByLabelText("Página 1")
+      .parentElement.parentElement;
+
     const contextMenuEvent = new MouseEvent("contextmenu", {
       bubbles: true,
       cancelable: true,
     });
+
     fireEvent(viewerContent, contextMenuEvent);
+
     expect(contextMenuEvent.defaultPrevented).toBe(true);
 
-    fireEvent.click(globalThis.document.querySelector(".pdf-viewer-overlay"));
+    fireEvent.click(
+      globalThis.document.querySelector(".pdf-viewer-overlay")
+    );
+
     expect(
       screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
     ).not.toBeInTheDocument();
   });
 
-  it("abre o modal direto quando ja existe documento selecionado", async () => {
+  it("abre o modal de detalhes para o documento selecionado", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     openFirstDocument();
 
     await waitFor(() => {
+      expect(getModal()).toBeInTheDocument();
       expect(screen.getByText("Tecnico")).toBeInTheDocument();
     });
-
-    expect(getModal()).toBeInTheDocument();
   });
 
   it("exibe erro nos detalhes e permite tentar novamente", async () => {
-    vi.mocked(fetchDocumentById).mockRejectedValue(new Error("falha"));
+    vi.mocked(fetchDocumentById).mockRejectedValueOnce(new Error("falha"));
 
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     openFirstDocument();
 
-    await waitFor(() => {
-      expect(screen.getByRole("alert")).toBeInTheDocument();
-    });
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
 
     expect(
       screen.getByText(
@@ -377,6 +443,7 @@ describe("Home", () => {
     ).toBeInTheDocument();
 
     vi.mocked(fetchDocumentById).mockResolvedValue(documentDetail);
+
     fireEvent.click(screen.getByText("Tentar novamente"));
 
     await waitFor(() => {
@@ -384,20 +451,20 @@ describe("Home", () => {
     });
   });
 
-  it("fecha o modal pelo botao e pelo overlay", async () => {
+  it("fecha o modal pelo botão e pelo overlay", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     openFirstDocument();
 
     await waitFor(() => {
-      expect(screen.getByText("Arquivo")).toBeInTheDocument();
+      expect(getModal()).toBeInTheDocument();
+      expect(getModal()).toHaveTextContent("Arquivo");
     });
 
     fireEvent.click(screen.getByLabelText("Fechar"));
+
     expect(getModal()).not.toBeInTheDocument();
 
     openFirstDocument();
@@ -416,22 +483,22 @@ describe("Home", () => {
   it("abre o PDF no visualizador ao visualizar pelos detalhes", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     openFirstDocument();
 
-    await waitFor(() => {
-      expect(screen.getByText("Tecnico")).toBeInTheDocument();
-    });
+    await screen.findByText("Tecnico");
 
     fireEvent.click(getModal().querySelector("footer .modal-view-button"));
 
-    expect(screen.getByRole("dialog", { name: /Manual do sistema.pdf/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", {
+        name: /Manual do sistema.pdf/,
+      })
+    ).toBeInTheDocument();
   });
 
-  it("nao abre o visualizador quando o documento nao tem URL de arquivo", async () => {
+  it("não abre o visualizador quando o documento não tem URL de arquivo", async () => {
     vi.mocked(fetchDocumentById).mockResolvedValue({
       ...documentDetail,
       data: null,
@@ -439,9 +506,7 @@ describe("Home", () => {
 
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     openFirstDocument();
 
@@ -452,22 +517,21 @@ describe("Home", () => {
     const viewButton = getModal().querySelector("footer .modal-view-button");
 
     expect(viewButton).toBeDisabled();
-    expect(screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
+    ).not.toBeInTheDocument();
   });
 
-  it("documentos restritos exibem inequivocamente o ícone de cadeado", async () => {
+  it("exibe o ícone de cadeado nos documentos restritos", async () => {
     render(<Home />);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Plano Militar Confidencial.pdf")
-      ).toBeInTheDocument();
-    });
+    await screen.findByText("Plano Militar Confidencial.pdf");
 
     expect(screen.getByTestId("lock-icon")).toBeInTheDocument();
   });
 
-  it("ao clicar no cartão de documento restrito, abre o modal exibindo o indicativo de acesso bloqueado", async () => {
+  it("abre os detalhes com indicação de acesso bloqueado ao clicar no cartão restrito", async () => {
     vi.mocked(fetchDocumentById).mockResolvedValue({
       ...documentsPage.results[2],
       descricao: "Documento restrito teste",
@@ -475,11 +539,7 @@ describe("Home", () => {
 
     render(<Home />);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Plano Militar Confidencial.pdf")
-      ).toBeInTheDocument();
-    });
+    await screen.findByText("Plano Militar Confidencial.pdf");
 
     fireEvent.click(screen.getByText("Plano Militar Confidencial.pdf"));
 
@@ -488,12 +548,13 @@ describe("Home", () => {
     });
 
     expect(screen.getByText("Acesso Bloqueado")).toBeInTheDocument();
+
     expect(
       screen.getByText("Documento com Acesso Restrito")
     ).toBeInTheDocument();
   });
 
-  it("ao clicar no botão de cadeado de um documento restrito, abre o modal de detalhes com o indicativo de bloqueio", async () => {
+  it("abre os detalhes com indicação de bloqueio ao clicar no botão do documento restrito", async () => {
     vi.mocked(fetchDocumentById).mockResolvedValue({
       ...documentsPage.results[2],
       descricao: "Documento restrito teste",
@@ -501,16 +562,11 @@ describe("Home", () => {
 
     render(<Home />);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText("Plano Militar Confidencial.pdf")
-      ).toBeInTheDocument();
-    });
+    await screen.findByText("Plano Militar Confidencial.pdf");
 
     const buttons = screen.getAllByRole("button", { name: "Visualizar" });
-    const restrictedButton = buttons[2];
 
-    fireEvent.click(restrictedButton);
+    fireEvent.click(buttons[2]);
 
     await waitFor(() => {
       expect(getModal()).toBeInTheDocument();
@@ -519,7 +575,7 @@ describe("Home", () => {
     expect(screen.getByText("Acesso Bloqueado")).toBeInTheDocument();
   });
 
-  it("ao tentar visualizar documento restrito pelo modal de detalhes, exibe o modal de acesso restrito e não abre o link", async () => {
+  it("avisa ao tentar visualizar documento restrito e não abre o PDF", async () => {
     vi.mocked(fetchDocumentById).mockResolvedValue({
       ...documentDetail,
       acesso_permitido: false,
@@ -527,21 +583,118 @@ describe("Home", () => {
 
     render(<Home />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Manual do sistema.pdf")).toBeInTheDocument();
-    });
+    await screen.findByText("Manual do sistema.pdf");
 
     openFirstDocument();
 
     await waitFor(() => {
       expect(getModal()).toBeInTheDocument();
+      expect(getModal()).toHaveTextContent("Acesso Bloqueado");
     });
 
     fireEvent.click(getModal().querySelector("footer .modal-view-button"));
 
     expect(
-      screen.getByRole("heading", { name: "Acesso Restrito" })
+      await screen.findByRole("heading", { name: "Acesso Restrito" })
     ).toBeInTheDocument();
-    expect(screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })).not.toBeInTheDocument();
+
+    expect(getModal()).not.toBeInTheDocument();
+
+    expect(
+      screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it("abre o EditDocumentModal ao clicar em Editar", async () => {
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
+
+    openFirstDocument();
+
+    await screen.findByText("Tecnico");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Editar documento" })
+    );
+
+    expect(screen.getByLabelText("Nome do documento *")).toBeInTheDocument();
+  });
+
+  it("volta aos detalhes ao cancelar o EditDocumentModal", async () => {
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
+
+    openFirstDocument();
+
+    await screen.findByText("Tecnico");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Editar documento" })
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Voltar aos detalhes/i })
+    );
+
+    await waitFor(() => {
+      expect(getModal()).toBeInTheDocument();
+    });
+  });
+
+  it("salva edição e atualiza a lista de documentos", async () => {
+    vi.mocked(updateDocument).mockResolvedValue({
+      id_documento: 1,
+      nome: "Manual atualizado.pdf",
+      setor: "tecnico",
+      nivel: "basico",
+    });
+
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
+
+    openFirstDocument();
+
+    await screen.findByText("Tecnico");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Editar documento" })
+    );
+
+    fireEvent.change(screen.getByLabelText("Nome do documento *"), {
+      target: { value: "Manual atualizado.pdf" },
+    });
+
+    fireEvent.change(screen.getByLabelText("Setor responsável *"), {
+      target: { value: "tecnico" },
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Salvar alterações" })
+    );
+
+    await waitFor(() => {
+      expect(updateDocument).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ nome: "Manual atualizado.pdf" })
+      );
+    });
+
+    // Após salvar, o nome aparece no modal de detalhes E no card da lista.
+    // Confirma que a lista (card) foi atualizada, olhando especificamente
+    // para o item com a classe `.document-name`.
+    await waitFor(() => {
+      const cardNames = Array.from(
+        globalThis.document.querySelectorAll(".document-name")
+      ).map((element) => element.textContent);
+
+      expect(cardNames).toContain("Manual atualizado.pdf");
+    });
+
+    // E o modal de detalhes também reflete a atualização.
+    const modalTitle = getModal()?.querySelector(".modal-code");
+    expect(modalTitle).toHaveTextContent("Manual atualizado.pdf");
   });
 });

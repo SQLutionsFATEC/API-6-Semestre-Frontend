@@ -27,11 +27,14 @@ export async function fetchDocuments({
   const params = {};
 
   const trimmedNome = typeof nome === "string" ? nome.trim() : "";
+
   if (trimmedNome !== "") {
     params.nome = trimmedNome;
   }
 
-  const trimmedContexto = typeof contexto === "string" ? contexto.trim() : "";
+  const trimmedContexto =
+    typeof contexto === "string" ? contexto.trim() : "";
+
   if (trimmedContexto !== "") {
     params.contexto = trimmedContexto;
   }
@@ -40,21 +43,29 @@ export async function fetchDocuments({
     if (typeof etiquetas === "string" && etiquetas.trim() !== "") {
       return [etiquetas.trim()];
     }
+
     if (Array.isArray(etiquetas) && etiquetas.length > 0) {
       return etiquetas
-        .map((item) => (typeof item === "string" ? item : item?.nome ?? ""))
+        .map((item) =>
+          typeof item === "string" ? item : item?.nome ?? ""
+        )
         .filter(Boolean);
     }
+
     return [];
   })();
 
   const filterTags = Array.isArray(tags)
     ? tags
-      .map((item) => (typeof item === "string" ? item : item?.nome ?? ""))
-      .filter(Boolean)
+        .map((item) =>
+          typeof item === "string" ? item : item?.nome ?? ""
+        )
+        .filter(Boolean)
     : [];
 
-  const resolvedEtiquetas = [...new Set([...searchTags, ...filterTags])].join(" ");
+  const resolvedEtiquetas = [
+    ...new Set([...searchTags, ...filterTags]),
+  ].join(" ");
 
   if (resolvedEtiquetas !== "") {
     params.etiquetas = resolvedEtiquetas;
@@ -64,15 +75,19 @@ export async function fetchDocuments({
     if (typeof setor === "string" && setor.trim() !== "") {
       return setor.trim();
     }
+
     if (Array.isArray(setor) && setor.length > 0) {
       return setor.filter(Boolean).join(", ");
     }
+
     if (typeof tipo === "string" && tipo.trim() !== "") {
       return tipo.trim();
     }
+
     if (Array.isArray(tipo) && tipo.length > 0) {
       return tipo.filter(Boolean).join(", ");
     }
+
     return "";
   })();
 
@@ -81,7 +96,10 @@ export async function fetchDocuments({
   }
 
   const trimmedDataAtualizacao =
-    typeof data_atualizacao === "string" ? data_atualizacao.trim() : "";
+    typeof data_atualizacao === "string"
+      ? data_atualizacao.trim()
+      : "";
+
   if (trimmedDataAtualizacao !== "") {
     params.data_atualizacao = trimmedDataAtualizacao;
   }
@@ -96,7 +114,9 @@ export async function fetchDocuments({
 
   const data = response.data;
 
-  if (!data?.results) return data;
+  if (!data?.results) {
+    return data;
+  }
 
   return {
     ...data,
@@ -112,7 +132,8 @@ export async function fetchDocuments({
 }
 
 export async function fetchTags(search = "") {
-  const trimmedSearch = typeof search === "string" ? search.trim() : "";
+  const trimmedSearch =
+    typeof search === "string" ? search.trim() : "";
 
   if (trimmedSearch.length < 2) {
     return [];
@@ -177,10 +198,23 @@ export async function createDocument({
     formData.append("data", file);
   }
 
-    const response = await api.post("/api/documentos/", formData, {
+  const response = await api.post("/api/documentos/", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 0,
   });
+
+  return response.data;
+}
+
+export async function updateDocument(idDocumento, payload) {
+  if (!idDocumento) {
+    throw new Error("O identificador do documento é obrigatório.");
+  }
+
+  const response = await api.patch(
+    `/api/documentos/${idDocumento}/`,
+    payload
+  );
 
   return response.data;
 }

@@ -1,8 +1,14 @@
-import { FiAlertCircle, FiFileText, FiFilter, FiUser } from "react-icons/fi";
+import {
+  FiAlertCircle,
+  FiFileText,
+  FiFilter,
+  FiUser,
+} from "react-icons/fi";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import DocumentList from "../../components/Document/DocumentList/DocumentList";
 import DocumentModal from "../../components/Document/DocumentModal/DocumentModal";
+import EditDocumentModal from "../../components/Document/EditDocumentModal/EditDocumentModal";
 import PdfViewer from "../../components/Document/PdfViewer/PdfViewer";
 import RestrictedModal from "../../components/Document/RestrictedModal/RestrictedModal";
 import FilterSidebar from "../../components/FilterSidebar/FilterSidebar";
@@ -34,6 +40,7 @@ const MOCK_CURRENT_USER = {
 function Home({ documentsRefreshKey = 0 }) {
   const [search, setSearch] = useState("");
   const [searchMode, setSearchMode] = useState("nome");
+
   const [documents, setDocuments] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
@@ -42,19 +49,27 @@ function Home({ documentsRefreshKey = 0 }) {
 
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false);
+
   const activeFiltersCount =
     filters.tags.length +
     filters.tipo.length +
     (filters.data_atualizacao ? 1 : 0);
 
   const [selectedDocument, setSelectedDocument] = useState(null);
-  const [viewerDocument, setViewerDocument] = useState(null);
-  const [documentDetailsLoading, setDocumentDetailsLoading] = useState(false);
+  const [documentDetailsLoading, setDocumentDetailsLoading] =
+    useState(false);
   const [documentDetailsError, setDocumentDetailsError] = useState(null);
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [restrictedModalOpen, setRestrictedModalOpen] = useState(false);
+  const [pdfViewerDocument, setPdfViewerDocument] = useState(null);
+
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(MOCK_CURRENT_USER);
+
+  // Invalida respostas antigas quando outra requisição de detalhes começa
+  // ou quando o modal de detalhes é fechado.
   const [refreshKey, setRefreshKey] = useState(0);
   const detailRequestId = useRef(0);
 
@@ -63,7 +78,7 @@ function Home({ documentsRefreshKey = 0 }) {
   }, []);
 
   const handleClosePdfViewer = useCallback(() => {
-    setViewerDocument(null);
+    setPdfViewerDocument(null);
   }, []);
 
   useEffect(() => {
@@ -84,10 +99,12 @@ function Home({ documentsRefreshKey = 0 }) {
         };
 
         const trimmedSearch = search.trim();
+
         if (trimmedSearch !== "") {
           if (searchMode === "nome") {
             queryParams.nome = trimmedSearch;
           } else if (searchMode === "tags") {
+            // Mantém o nome do parâmetro utilizado na versão direita.
             queryParams.etiquetas = trimmedSearch;
           } else if (searchMode === "conteudo") {
             queryParams.contexto = trimmedSearch;
@@ -150,6 +167,7 @@ function Home({ documentsRefreshKey = 0 }) {
       tipo: [...(nextFilters.tipo || [])],
       data_atualizacao: nextFilters.data_atualizacao || "",
     });
+
     setCurrentPage(1);
     setIsFilterSidebarOpen(false);
   }
@@ -160,21 +178,36 @@ function Home({ documentsRefreshKey = 0 }) {
       tipo: [],
       data_atualizacao: "",
     });
+
     setCurrentPage(1);
   }
 
+  function handleCloseDocumentModal() {
+    detailRequestId.current += 1;
+
+    setSelectedDocument(null);
+    setDocumentDetailsLoading(false);
+    setDocumentDetailsError(null);
+    setIsEditModalOpen(false);
+  }
+
   function handleViewPdf(document) {
-    if (document.acesso_permitido === false) {
+    if (document?.acesso_permitido === false) {
+      setPdfViewerDocument(null);
+      handleCloseDocumentModal();
       setRestrictedModalOpen(true);
       return;
     }
 
-    if (document.data) {
-      setViewerDocument(document);
+    if (document?.data) {
+      setPdfViewerDocument(document);
       return;
     }
 
-    console.log("PDF ainda não disponível:", document.nome);
+    console.log(
+      "PDF ainda não disponível:",
+      document?.nome ?? "Documento sem título"
+    );
   }
 
   async function loadDocumentDetails(idDocumento, initialDocument) {
@@ -199,6 +232,7 @@ function Home({ documentsRefreshKey = 0 }) {
     } catch (err) {
       if (requestId === detailRequestId.current) {
         console.error("Erro ao buscar detalhes do documento:", err);
+
         setDocumentDetailsError(
           "Não foi possível carregar os detalhes do documento."
         );
@@ -211,15 +245,14 @@ function Home({ documentsRefreshKey = 0 }) {
   }
 
   function handleOpenDocument(document) {
-    setSelectedDocument(document);
-    loadDocumentDetails(document.id_documento, document);
-  }
-
-  function handleCloseDocumentModal() {
     detailRequestId.current += 1;
-    setSelectedDocument(null);
+
+    setIsEditModalOpen(false);
+    setSelectedDocument(document);
     setDocumentDetailsLoading(false);
     setDocumentDetailsError(null);
+
+    loadDocumentDetails(document.id_documento, document);
   }
 
   function handleRetryDocumentDetails() {
@@ -230,13 +263,49 @@ function Home({ documentsRefreshKey = 0 }) {
       );
     }
   }
+
+  function handleEditDocument(document) {
+    if (document?.acesso_permitido === false) return;
+
+    setIsEditModalOpen(true);
+  }
+
+  function handleBackToDetails() {
+    setIsEditModalOpen(false);
+  }
+
+  function handleDocumentUpdated(updatedDocument) {
+    setSelectedDocument((current) => {
+      if (!current) return updatedDocument;
+
+      return {
+        ...current,
+        ...updatedDocument,
+      };
+    });
+
+    setDocuments((currentDocuments) =>
+      currentDocuments.map((item) =>
+        item.id_documento === updatedDocument.id_documento
+          ? { ...item, ...updatedDocument }
+          : item
+      )
+    );
+
+    setIsEditModalOpen(false);
+  }
+
   function handleUserUpdated(updatedUser) {
-    setCurrentUser((prev) => ({ ...prev, ...updatedUser }));
+    setCurrentUser((prev) => ({
+      ...prev,
+      ...updatedUser,
+    }));
   }
 
   function handleUserDeleted() {
     console.log("Conta excluída (simulação).");
     setCurrentUser(MOCK_CURRENT_USER);
+    setIsUserModalOpen(false);
   }
 
   return (
@@ -257,24 +326,33 @@ function Home({ documentsRefreshKey = 0 }) {
 
           <button
             type="button"
-            className={`filter-button${activeFiltersCount > 0 ? " filter-button-active" : ""}`}
+            className={`filter-button${
+              activeFiltersCount > 0 ? " filter-button-active" : ""
+            }`}
             aria-haspopup="dialog"
             aria-expanded={isFilterSidebarOpen}
             aria-label={
               activeFiltersCount > 0
-                ? `Filtros: ${activeFiltersCount} ativo${activeFiltersCount > 1 ? "s" : ""}`
+                ? `Filtros: ${activeFiltersCount} ativo${
+                    activeFiltersCount > 1 ? "s" : ""
+                  }`
                 : "Filtros"
             }
             onClick={() => setIsFilterSidebarOpen(true)}
           >
             <FiFilter size={15} aria-hidden="true" />
             Filtros
+
             {activeFiltersCount > 0 && (
-              <span className="filter-active-indicator" aria-hidden="true">
+              <span
+                className="filter-active-indicator"
+                aria-hidden="true"
+              >
                 {activeFiltersCount}
               </span>
             )}
           </button>
+
           <button
             type="button"
             className="user-trigger"
@@ -289,14 +367,19 @@ function Home({ documentsRefreshKey = 0 }) {
 
       <section className="documents-section">
         {loading && (
-          <p className="loading-message">Carregando documentos...</p>
+          <p className="loading-message">
+            Carregando documentos...
+          </p>
         )}
 
         {error && (
-          <div className="error-message">
+          <div className="error-message" role="alert">
             <FiAlertCircle size={22} />
+
             <div className="error-text">
-              <span className="error-title">Erro ao carregar</span>
+              <span className="error-title">
+                Erro ao carregar
+              </span>
               <span className="error-description">{error}</span>
             </div>
           </div>
@@ -309,6 +392,7 @@ function Home({ documentsRefreshKey = 0 }) {
               onView={handleViewPdf}
               onOpenDetails={handleOpenDocument}
             />
+
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
@@ -326,14 +410,26 @@ function Home({ documentsRefreshKey = 0 }) {
         onClearFilters={handleClearFilters}
       />
 
-      <DocumentModal
-        document={selectedDocument}
-        loading={documentDetailsLoading}
-        error={documentDetailsError}
-        onClose={handleCloseDocumentModal}
-        onRetry={handleRetryDocumentDetails}
-        onViewPdf={handleViewPdf}
-      />
+      {!isEditModalOpen && (
+        <DocumentModal
+          document={selectedDocument}
+          loading={documentDetailsLoading}
+          error={documentDetailsError}
+          onClose={handleCloseDocumentModal}
+          onRetry={handleRetryDocumentDetails}
+          onViewPdf={handleViewPdf}
+          onEdit={handleEditDocument}
+        />
+      )}
+
+      {isEditModalOpen && selectedDocument && (
+        <EditDocumentModal
+          document={selectedDocument}
+          onClose={handleBackToDetails}
+          onBackToDetails={handleBackToDetails}
+          onDocumentUpdated={handleDocumentUpdated}
+        />
+      )}
 
       <RestrictedModal
         isOpen={restrictedModalOpen}
@@ -341,8 +437,8 @@ function Home({ documentsRefreshKey = 0 }) {
       />
 
       <PdfViewer
-        key={viewerDocument?.data || "closed"}
-        document={viewerDocument}
+        key={pdfViewerDocument?.data || "closed"}
+        document={pdfViewerDocument}
         onClose={handleClosePdfViewer}
       />
 
@@ -358,7 +454,7 @@ function Home({ documentsRefreshKey = 0 }) {
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onDocumentCreated={() => {
-          setRefreshKey(prev => prev + 1);
+          setRefreshKey((prev) => prev + 1);
         }}
         onViewDocument={(documentoCriado) => {
           setIsUploadModalOpen(false);

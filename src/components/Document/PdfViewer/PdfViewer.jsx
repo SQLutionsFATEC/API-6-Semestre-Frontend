@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { FiX, FiZoomIn, FiZoomOut } from "react-icons/fi";
 
@@ -7,9 +8,11 @@ const ZOOM_STEP = 25;
 
 function getDocumentFormat(document) {
   const extensionFromName = document?.nome?.match(/\.([^.]+)$/)?.[1];
+
   const extensionFromUrl = document?.data
     ?.split(/[?#]/)[0]
     .match(/\.([^.]+)$/)?.[1];
+
   const extension =
     extensionFromName || extensionFromUrl || document?.tipo_arquivo || "";
 
@@ -19,13 +22,20 @@ function getDocumentFormat(document) {
 function PdfViewer({ document, onClose }) {
   const [zoom, setZoom] = useState(100);
   const [pdfDocument, setPdfDocument] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(document));
   const [error, setError] = useState(null);
+
   const canvasRefs = useRef([]);
   const documentFormat = getDocumentFormat(document);
 
   useEffect(() => {
     if (!document) return undefined;
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
 
     window.addEventListener("keydown", handleKeyDown);
     globalThis.document.body.classList.add("pdf-viewer-open");
@@ -34,45 +44,59 @@ function PdfViewer({ document, onClose }) {
       window.removeEventListener("keydown", handleKeyDown);
       globalThis.document.body.classList.remove("pdf-viewer-open");
     };
-
-    function handleKeyDown(event) {
-      if (event.key === "Escape") onClose();
-    }
   }, [document, onClose]);
 
   useEffect(() => {
-    if (!document?.data) return undefined;
-
     let cancelled = false;
     let loadingTask;
 
-    const loadDocument = async () => {
+    canvasRefs.current = [];
+
+    if (!document) {
+      return undefined;
+    }
+
+    async function loadDocument() {
       try {
+        if (!document.data) {
+          throw new Error("URL do documento não disponível.");
+        }
+
         if (documentFormat !== "pdf") {
-          throw new Error(`Formato não suportado: ${documentFormat || "desconhecido"}`);
+          throw new Error(
+            `Formato não suportado: ${documentFormat || "desconhecido"}`
+          );
         }
 
         const [pdfjs, worker] = await Promise.all([
           import("pdfjs-dist"),
           import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
         ]);
+
         if (cancelled) return;
 
         pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+
         loadingTask = pdfjs.getDocument({
           url: document.data,
         });
+
         const loadedDocument = await loadingTask.promise;
-        if (!cancelled) setPdfDocument(loadedDocument);
+
+        if (!cancelled) {
+          setPdfDocument(loadedDocument);
+        }
       } catch (loadError) {
         if (!cancelled) {
           console.error("Erro ao carregar PDF:", loadError);
           setError("Não foi possível carregar ou exibir o documento.");
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    };
+    }
 
     void loadDocument();
 
@@ -88,36 +112,53 @@ function PdfViewer({ document, onClose }) {
     let cancelled = false;
     const renderTasks = [];
 
-    const renderPages = async () => {
+    async function renderPages() {
       try {
         await Promise.all(
           Array.from({ length: pdfDocument.numPages }, async (_, index) => {
             const page = await pdfDocument.getPage(index + 1);
+
             if (cancelled) return;
 
-            const viewport = page.getViewport({ scale: zoom / 100 });
+            const viewport = page.getViewport({
+              scale: zoom / 100,
+            });
+
             const canvas = canvasRefs.current[index];
+
             if (!canvas) return;
 
             const context = canvas.getContext("2d");
+
             if (!context) {
-              throw new Error("Canvas 2D indisponível para renderizar o PDF.");
+              throw new Error(
+                "Canvas 2D indisponível para renderizar o PDF."
+              );
             }
 
             canvas.width = viewport.width;
             canvas.height = viewport.height;
-            const renderTask = page.render({ canvas, canvasContext: context, viewport });
+
+            const renderTask = page.render({
+              canvas,
+              canvasContext: context,
+              viewport,
+            });
+
             renderTasks.push(renderTask);
             await renderTask.promise;
           })
         );
       } catch (renderError) {
-        if (!cancelled && renderError.name !== "RenderingCancelledException") {
+        if (
+          !cancelled &&
+          renderError.name !== "RenderingCancelledException"
+        ) {
           console.error("Erro ao renderizar PDF:", renderError);
           setError("Não foi possível exibir o documento.");
         }
       }
-    };
+    }
 
     void renderPages();
 
@@ -129,17 +170,23 @@ function PdfViewer({ document, onClose }) {
 
   if (!document) return null;
 
-  const handleOverlayClick = (event) => {
-    if (event.target === event.currentTarget) onClose();
-  };
+  function handleOverlayClick(event) {
+    if (event.target === event.currentTarget) {
+      onClose();
+    }
+  }
 
-  const handleZoomOut = () => {
-    setZoom((currentZoom) => Math.max(MIN_ZOOM, currentZoom - ZOOM_STEP));
-  };
+  function handleZoomOut() {
+    setZoom((currentZoom) =>
+      Math.max(MIN_ZOOM, currentZoom - ZOOM_STEP)
+    );
+  }
 
-  const handleZoomIn = () => {
-    setZoom((currentZoom) => Math.min(MAX_ZOOM, currentZoom + ZOOM_STEP));
-  };
+  function handleZoomIn() {
+    setZoom((currentZoom) =>
+      Math.min(MAX_ZOOM, currentZoom + ZOOM_STEP)
+    );
+  }
 
   return (
     <div
@@ -160,6 +207,7 @@ function PdfViewer({ document, onClose }) {
           >
             {document.nome}
           </h2>
+
           <div className="pdf-viewer-controls flex items-center gap-3 text-sm text-[#351b27] max-[600px]:gap-1 max-[600px]:text-xs">
             <button
               type="button"
@@ -170,7 +218,9 @@ function PdfViewer({ document, onClose }) {
             >
               <FiZoomOut aria-hidden="true" />
             </button>
+
             <span aria-live="polite">{zoom}%</span>
+
             <button
               type="button"
               aria-label="Aumentar zoom"
@@ -181,6 +231,7 @@ function PdfViewer({ document, onClose }) {
               <FiZoomIn aria-hidden="true" />
             </button>
           </div>
+
           <button
             type="button"
             className="pdf-viewer-close inline-flex size-9 items-center justify-center rounded-md border-0 bg-transparent text-[#351b27] hover:bg-slate-100"
@@ -193,19 +244,24 @@ function PdfViewer({ document, onClose }) {
 
         <div className="pdf-viewer-content flex-1 overflow-auto p-5 text-center text-white [&>p]:my-6">
           {loading && <p role="status">Carregando documento...</p>}
+
           {error && <p role="alert">{error}</p>}
+
           {!loading && !error && pdfDocument && (
             <div className="pdf-viewer-pages flex min-w-max flex-col items-center gap-4">
-              {Array.from({ length: pdfDocument.numPages }, (_, index) => (
-                <canvas
-                  key={index + 1}
-                  ref={(canvas) => {
-                    canvasRefs.current[index] = canvas;
-                  }}
-                  className="block max-w-none bg-white shadow-[0_2px_12px_rgb(0_0_0_/_28%)]"
-                  aria-label={`Página ${index + 1}`}
-                />
-              ))}
+              {Array.from(
+                { length: pdfDocument.numPages },
+                (_, index) => (
+                  <canvas
+                    key={index + 1}
+                    ref={(canvas) => {
+                      canvasRefs.current[index] = canvas;
+                    }}
+                    className="block max-w-none bg-white shadow-[0_2px_12px_rgb(0_0_0_/_28%)]"
+                    aria-label={`Página ${index + 1}`}
+                  />
+                )
+              )}
             </div>
           )}
         </div>
