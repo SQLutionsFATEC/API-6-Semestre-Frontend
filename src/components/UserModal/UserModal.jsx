@@ -86,7 +86,7 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
     } catch (err) {
       console.error(err);
       
-      if (err.response?.status === 400) {''
+      if (err.response?.status === 400) {
         const apiErrors = err.response.data;
         const mappedErrors = {};
         if (apiErrors.nome) mappedErrors.name = apiErrors.nome[0];
