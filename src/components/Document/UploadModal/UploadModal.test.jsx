@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import UploadModal from "./UploadModal";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("UploadModal", () => {
   it("não renderiza quando isOpen é false", () => {
@@ -142,6 +146,7 @@ describe("UploadModal", () => {
   });
 
   it("trata erro na criação do documento", async () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     const mockCreate = vi.fn().mockRejectedValue({
       message: "Request failed with status code 400",
       response: {
@@ -168,6 +173,9 @@ describe("UploadModal", () => {
     expect(
       await screen.findByText("Não foi possível gerar o embedding no Ollama.")
     ).toBeInTheDocument();
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Não foi possível gerar o embedding no Ollama."
+    );
   });
 
   it("realiza o upload com sucesso, chama onDocumentCreated e exibe o modal de detalhes", async () => {
@@ -214,7 +222,11 @@ describe("UploadModal", () => {
     const viewBtn = screen.getByRole("button", { name: "Ver documento" });
     fireEvent.click(viewBtn);
     
-    expect(await screen.findByText("Informações do documento")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("dialog", { name: "Detalhes do documento" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Etiquetas atribuídas")).toBeInTheDocument();
+    expect(screen.getByText("Técnico")).toBeInTheDocument();
   });
 
   it("limpa o formulário ao clicar em Cadastrar outro na tela de sucesso", async () => {
@@ -257,7 +269,9 @@ describe("UploadModal", () => {
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith("Não foi possível cadastrar o documento.");
     });
-    alertSpy.mockRestore();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível cadastrar o documento."
+    );
   });
 
   it("fecha o modal pelo X na tela de sucesso e cobre clique fora na mesma tela", async () => {
