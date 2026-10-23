@@ -1,6 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import Sidebar from "./Sidebar";
+import { keycloak } from "../../services/keycloak";
+
+vi.mock("../../services/keycloak", () => ({
+  keycloak: {
+    logout: vi.fn(),
+  },
+}));
 
 describe("Sidebar", () => {
   it("renderiza a logo no topo da sidebar", () => {
@@ -46,5 +53,14 @@ describe("Sidebar", () => {
     expect(
       screen.queryByRole("heading", { name: "Cadastrar documento" })
     ).not.toBeInTheDocument();
+  });
+
+  it("chama o logout do Keycloak ao clicar em Deslogar", () => {
+    render(<Sidebar />);
+
+    const logoutBtn = screen.getByRole("button", { name: /Deslogar/i });
+    fireEvent.click(logoutBtn);
+
+    expect(keycloak.logout).toHaveBeenCalled();
   });
 });

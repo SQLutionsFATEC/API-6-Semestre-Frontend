@@ -5,6 +5,7 @@ import {
   FiUploadCloud,
   FiChevronRight,
 } from "react-icons/fi";
+import { keycloak } from "../../services/keycloak";
 import logo from "../../assets/logo.svg";
 import UploadModal from "../Document/UploadModal/UploadModal";
 import "./Sidebar.css";
@@ -18,6 +19,10 @@ function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
     } else {
       setIsUploadModalOpen(true);
     }
+  };
+
+  const handleLogout = () => {
+    keycloak.logout({ redirectUri: window.location.origin });
   };
 
   return (
@@ -53,7 +58,11 @@ function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
         </div>
 
         <div className="sidebar-footer">
-          <button type="button" className="logout-button">
+          <button 
+            type="button" 
+            className="logout-button" 
+            onClick={handleLogout}
+          >
             <FiLogOut size={18} />
             Deslogar
           </button>
