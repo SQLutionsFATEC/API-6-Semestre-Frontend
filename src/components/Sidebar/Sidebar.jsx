@@ -8,10 +8,16 @@ import {
 import { keycloak } from "../../services/keycloak";
 import logo from "../../assets/logo.svg";
 import UploadModal from "../Document/UploadModal/UploadModal";
+import { keycloak } from "../../services/keycloak";
 import "./Sidebar.css";
 
 function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  // Verifica se o usuário possui a role "Operador"
+  const isOperator =
+    keycloak.hasRealmRole("operador") ||
+    keycloak.tokenParsed?.realm_access?.roles?.includes("operador");
 
   const handleOpenUpload = () => {
     if (onOpenUploadModal) {
@@ -41,23 +47,25 @@ function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
           </button>
         </nav>
 
-        <div className="sidebar-upload-container">
-          <button
-            type="button"
-            className="sidebar-upload-button"
-            onClick={handleOpenUpload}
-            aria-label="Cadastrar documento"
-          >
-            <div className="sidebar-upload-content">
-              <FiUploadCloud size={20} className="sidebar-upload-icon" />
-              <div className="sidebar-upload-text">
-                <span>Cadastrar</span>
-                <span>documento</span>
+        {isOperator && (
+          <div className="sidebar-upload-container">
+            <button
+              type="button"
+              className="sidebar-upload-button"
+              onClick={handleOpenUpload}
+              aria-label="Cadastrar documento"
+            >
+              <div className="sidebar-upload-content">
+                <FiUploadCloud size={20} className="sidebar-upload-icon" />
+                <div className="sidebar-upload-text">
+                  <span>Cadastrar</span>
+                  <span>documento</span>
+                </div>
               </div>
-            </div>
-            <FiChevronRight size={16} className="sidebar-chevron-icon" />
-          </button>
-        </div>
+              <FiChevronRight size={16} className="sidebar-chevron-icon" />
+            </button>
+          </div>
+        )}
 
         <div className="sidebar-footer">
           <button 

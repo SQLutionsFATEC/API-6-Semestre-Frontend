@@ -21,7 +21,7 @@ describe("Sidebar", () => {
     expect(logoImg).toBeInTheDocument();
   });
 
-  it("renderiza o botão 'Cadastrar documento' acima do botão 'Deslogar'", () => {
+  it("renderiza o botão 'Cadastrar documento' acima do botão 'Deslogar' para operadores", () => {
     render(<Sidebar />);
     const uploadBtn = screen.getByRole("button", { name: /Cadastrar documento/i });
     const logoutBtn = screen.getByRole("button", { name: /Deslogar/i });
