@@ -16,6 +16,7 @@ function UploadModal({
   onClose,
   createDocumentFn = createDocument,
   onDocumentCreated,
+  onViewDocument,
 }) {
   const NIVEIS_ACESSO = ["Básico", "Comercial", "Militar"];
 
@@ -29,11 +30,15 @@ function UploadModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
-  const [createdInfo, setCreatedInfo] = useState({ fileName: "", sector: "", document: null });
+  const [createdInfo, setCreatedInfo] = useState({
+    fileName: "",
+    sector: "",
+    document: null,
+  });
   const [isDragging, setIsDragging] = useState(false);
-  
+
   const [showDetails, setShowDetails] = useState(false);
-  
+
   const fileInputRef = useRef(null);
 
   const resetForm = () => {
@@ -56,7 +61,6 @@ function UploadModal({
   };
 
   const handleOverlayClick = (e) => {
-
     if (e.target === e.currentTarget && !showDetails) {
       handleClose();
     }
@@ -64,13 +68,12 @@ function UploadModal({
 
   if (!isOpen) return null;
 
-
   if (showDetails && createdInfo.document) {
     return (
       <DocumentModal
         document={{
           ...createdInfo.document,
- 
+
           etiquetas: createdInfo.document.etiquetas || [{ id_etiqueta: 999, nome: "NAO_CLASSIFICADO" }],
           tipo_arquivo: createdInfo.document.tipo_arquivo || "pdf",
           data: createdInfo.document.data || "fake.pdf",
@@ -78,7 +81,7 @@ function UploadModal({
         }}
         loading={false}
         error={null}
-        onClose={handleClose} 
+        onClose={handleClose}
         onRetry={() => {}}
         onViewPdf={() => {}}
       />
@@ -167,6 +170,11 @@ function UploadModal({
   };
 
   const handleViewDocument = () => {
+    if (onViewDocument && createdInfo.document) {
+      onViewDocument(createdInfo.document);
+      handleClose();
+      return;
+    }
     setShowDetails(true);
   };
 

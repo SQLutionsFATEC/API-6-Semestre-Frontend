@@ -44,8 +44,10 @@ function DocumentItem({ document, onView, onOpenDetails }) {
   const handleActionClick = (e) => {
     e.stopPropagation();
 
-    if (isRestricted && onOpenDetails) {
-      onOpenDetails(document);
+    if (isRestricted) {
+      if (onView) {
+        onView(document);
+      }
       return;
     }
 

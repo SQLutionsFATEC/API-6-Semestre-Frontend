@@ -8,6 +8,11 @@ const { getDocument, workerSrc } = vi.hoisted(() => ({
   workerSrc: { value: "" },
 }));
 
+vi.mock("../../../services/keycloak", () => ({
+  getAccessToken: vi.fn().mockResolvedValue("access-token"),
+  restartLoginAfterUnauthorized: vi.fn(),
+}));
+
 vi.mock("pdfjs-dist", () => ({
   GlobalWorkerOptions: workerSrc,
   getDocument,
@@ -89,13 +94,26 @@ describe("PdfViewer", () => {
     expect(pdfDocument.getPage).toHaveBeenCalledTimes(2);
   });
 
-  it("extrai a extensão pela URL quando o nome não tem extensão", async () => {
-    const { pdfDocument } = createPdfDocument();
-    getDocument.mockReturnValue({
-      promise: Promise.resolve(pdfDocument),
-      destroy: vi.fn(),
-    });
+  it("envia o token ao carregar um PDF hospedado pela API", async () => {
+    render(
+      <PdfViewer
+        document={{
+          ...pdf,
+          data: "http://localhost:8000/media/documentos/manual.pdf",
+        }}
+        onClose={vi.fn()}
+      />
+    );
 
+    await screen.findByLabelText("Página 1");
+
+    expect(getDocument).toHaveBeenCalledWith({
+      url: "http://localhost:8000/media/documentos/manual.pdf",
+      httpHeaders: { Authorization: "Bearer access-token" },
+    });
+  });
+
+  it("extrai a extensão pela URL quando o nome não tem extensão", async () => {
     render(
       <PdfViewer
         document={{
