@@ -8,7 +8,6 @@ import {
 import { keycloak } from "../../services/keycloak";
 import logo from "../../assets/logo.svg";
 import UploadModal from "../Document/UploadModal/UploadModal";
-import { keycloak } from "../../services/keycloak";
 import "./Sidebar.css";
 
 function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
