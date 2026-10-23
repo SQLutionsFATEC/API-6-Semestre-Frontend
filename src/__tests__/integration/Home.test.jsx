@@ -17,6 +17,16 @@ vi.mock("../../services/documentService", () => ({
   updateDocument: vi.fn(),
 }));
 
+vi.mock("../../services/userService", () => ({
+  fetchUserProfile: vi.fn().mockResolvedValue({
+    nome: "Usuário Teste",
+    email: "teste@teste.com",
+    nivel_acesso: "basico",
+    setor: "tecnico",
+  }),
+  updateProfile: vi.fn(),
+}));
+
 vi.mock("pdfjs-dist", () => ({
   GlobalWorkerOptions: { workerSrc: "" },
   getDocument: vi.fn(() => ({
