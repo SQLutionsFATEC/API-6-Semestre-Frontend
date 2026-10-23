@@ -22,7 +22,9 @@ function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
   };
 
   const handleLogout = () => {
-    keycloak.logout({ redirectUri: window.location.origin });
+    keycloak.logout({ redirectUri: window.location.origin }).catch((error) => {
+      console.error("Erro ao fazer logout:", error);
+    });
   };
 
   return (

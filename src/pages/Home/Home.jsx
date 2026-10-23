@@ -94,7 +94,10 @@ function Home({ documentsRefreshKey = 0 }) {
         setCurrentUser({ name: "Usuário", email: "—", role: "—", level: "—" });
       }
     }
-    loadUser();
+
+    loadUser().catch((err) => {
+      console.error("Erro inesperado ao carregar usuário:", err);
+    });
   }, []);
 
   useEffect(() => {
