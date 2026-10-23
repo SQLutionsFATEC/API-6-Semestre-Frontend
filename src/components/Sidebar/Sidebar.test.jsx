@@ -6,6 +6,7 @@ import { keycloak } from "../../services/keycloak";
 vi.mock("../../services/keycloak", () => ({
   keycloak: {
     logout: vi.fn().mockResolvedValue(undefined),
+    hasRealmRole: vi.fn().mockReturnValue(true),
   },
 }));
 
@@ -13,6 +14,7 @@ describe("Sidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     keycloak.logout.mockResolvedValue(undefined);
+    keycloak.hasRealmRole.mockReturnValue(true);
   });
 
   it("renderiza a logo no topo da sidebar", () => {

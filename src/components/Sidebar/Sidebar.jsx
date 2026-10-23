@@ -13,9 +13,8 @@ import "./Sidebar.css";
 function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-  // Verifica se o usuário possui a role "Operador"
   const isOperator =
-    keycloak.hasRealmRole("operador") ||
+    keycloak.hasRealmRole?.("operador") ||
     keycloak.tokenParsed?.realm_access?.roles?.includes("operador");
 
   const handleOpenUpload = () => {
@@ -67,9 +66,9 @@ function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
         )}
 
         <div className="sidebar-footer">
-          <button 
-            type="button" 
-            className="logout-button" 
+          <button
+            type="button"
+            className="logout-button"
             onClick={handleLogout}
           >
             <FiLogOut size={18} />
