@@ -412,6 +412,17 @@
 }
 
 /* RODAPÉ E AÇÕES */
+.document-edit-permission-error {
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  background: #fef2f2;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .modal-actions {
   display: flex;
   align-items: center;

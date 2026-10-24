@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import Home from "../../pages/Home/Home";
+import { keycloak } from "../../services/keycloak";
 import {
   fetchDocumentById,
   fetchDocuments,
@@ -38,6 +39,7 @@ vi.mock("pdfjs-dist", () => ({
 }));
 
 vi.mock("../../services/keycloak", () => ({
+  keycloak: { hasRealmRole: vi.fn(() => true) },
   getAccessToken: vi.fn().mockResolvedValue("access-token"),
   restartLoginAfterUnauthorized: vi.fn(),
 }));
@@ -606,6 +608,22 @@ describe("Home", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("mantém Editar habilitado, mas bloqueia a edição sem a role operador", async () => {
+    keycloak.hasRealmRole.mockReturnValueOnce(false);
+    render(<Home />);
+    await screen.findByText("Manual do sistema.pdf");
+    openFirstDocument();
+    await screen.findByText("Tecnico");
+    const editButton = screen.getByRole("button", { name: "Editar documento" });
+    expect(editButton).toBeEnabled();
+    fireEvent.click(editButton);
+    expect(keycloak.hasRealmRole).toHaveBeenCalledWith("operador");
+    expect(screen.getByRole("alert")).toHaveTextContent("Solicite a um operador que faça a alteração.");
+    expect(screen.queryByLabelText("Nome do documento *")).not.toBeInTheDocument();
+    expect(getModal()).toBeInTheDocument();
+    expect(updateDocument).not.toHaveBeenCalled();
+  });
+
   it("abre o EditDocumentModal ao clicar em Editar", async () => {
     render(<Home />);
 
@@ -645,12 +663,8 @@ describe("Home", () => {
   });
 
   it("salva edição e atualiza a lista de documentos", async () => {
-    vi.mocked(updateDocument).mockResolvedValue({
-      id_documento: 1,
-      nome: "Manual atualizado.pdf",
-      setor: "tecnico",
-      nivel: "basico",
-    });
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.mocked(updateDocument).mockResolvedValue("");
 
     render(<Home />);
 
@@ -668,8 +682,9 @@ describe("Home", () => {
       target: { value: "Manual atualizado.pdf" },
     });
 
-    fireEvent.change(screen.getByLabelText("Setor responsável *"), {
-      target: { value: "tecnico" },
+    vi.mocked(fetchDocumentById).mockResolvedValue({
+      ...documentDetail,
+      nome: "Manual atualizado.pdf",
     });
 
     fireEvent.click(
@@ -679,9 +694,11 @@ describe("Home", () => {
     await waitFor(() => {
       expect(updateDocument).toHaveBeenCalledWith(
         1,
-        expect.objectContaining({ nome: "Manual atualizado.pdf" })
+        { nome: "Manual atualizado.pdf" }
       );
     });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Voltar aos detalhes" }));
 
     // Após salvar, o nome aparece no modal de detalhes E no card da lista.
     // Confirma que a lista (card) foi atualizada, olhando especificamente
@@ -695,7 +712,8 @@ describe("Home", () => {
     });
 
     // E o modal de detalhes também reflete a atualização.
-    const modalTitle = getModal()?.querySelector(".modal-code");
-    expect(modalTitle).toHaveTextContent("Manual atualizado.pdf");
+    await waitFor(() => {
+      expect(getModal()?.querySelector(".modal-code")).toHaveTextContent("Manual atualizado.pdf");
+    });
   });
 });

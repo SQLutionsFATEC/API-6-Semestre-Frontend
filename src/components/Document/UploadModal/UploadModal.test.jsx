@@ -225,7 +225,7 @@ describe("UploadModal", () => {
     expect(
       await screen.findByRole("dialog", { name: "Detalhes do documento" })
     ).toBeInTheDocument();
-    expect(screen.getByText("Etiquetas atribuídas")).toBeInTheDocument();
+    expect(screen.getByText("Tags")).toBeInTheDocument();
     expect(screen.getByText("Técnico")).toBeInTheDocument();
   });
 
