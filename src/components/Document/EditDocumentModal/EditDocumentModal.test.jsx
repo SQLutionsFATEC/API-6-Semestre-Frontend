@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -19,8 +20,12 @@ const documentMock = {
 };
 
 describe("EditDocumentModal", () => {
+  beforeEach(() => {
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+  });
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -36,9 +41,7 @@ describe("EditDocumentModal", () => {
     expect(screen.getByLabelText("Nome do documento *")).toHaveValue(
       "Relatório financeiro.pdf"
     );
-    expect(screen.getByLabelText("Setor responsável *")).toHaveValue(
-      "tecnico"
-    );
+    expect(screen.queryByLabelText("Setor responsável *")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Nível de acesso *")).toHaveValue("basico");
     expect(
       screen.getByText(/O arquivo não pode ser alterado nesta tela/)
@@ -56,12 +59,6 @@ describe("EditDocumentModal", () => {
     );
 
     expect(
-      screen.getByRole("option", { name: "Técnico" })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("option", { name: "Não atribuído" })
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("option", { name: "Básico" })
     ).toBeInTheDocument();
     expect(
@@ -70,7 +67,6 @@ describe("EditDocumentModal", () => {
   });
 
   it("valida o nome com alert antes de enviar", async () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     const updateDocumentFn = vi.fn();
 
     render(
@@ -87,9 +83,7 @@ describe("EditDocumentModal", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      "O nome do documento é obrigatório."
-    );
+    expect(screen.getByText(/obrigatório|identificar o documento|Nenhuma altera/)).toHaveTextContent("O nome do documento é obrigatório.");
     expect(updateDocumentFn).not.toHaveBeenCalled();
   });
 
@@ -108,6 +102,74 @@ describe("EditDocumentModal", () => {
       screen.getByRole("button", { name: /Voltar aos detalhes/i })
     );
 
+    expect(onBackToDetails).toHaveBeenCalledTimes(1);
+  });
+
+  it("não envia PATCH quando nenhum campo mudou", () => {
+    const updateDocumentFn = vi.fn();
+    const onBackToDetails = vi.fn();
+    render(<EditDocumentModal document={{ ...documentMock, nivel: "Básico" }} updateDocumentFn={updateDocumentFn} onBackToDetails={onBackToDetails} />);
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    expect(updateDocumentFn).not.toHaveBeenCalled();
+    expect(onBackToDetails).not.toHaveBeenCalled();
+    expect(screen.getByText(/obrigatório|identificar o documento|Nenhuma altera/)).toHaveTextContent("Nenhuma altera\u00e7\u00e3o foi realizada.");
+    fireEvent.click(screen.getByRole("button", { name: "Voltar aos detalhes" }));
+    expect(onBackToDetails).toHaveBeenCalledTimes(1);
+  });
+
+  it("trata sucesso sem corpo (204) e envia a remoção completa das etiquetas", async () => {
+    const updateDocumentFn = vi.fn().mockResolvedValue("");
+    const onDocumentUpdated = vi.fn();
+    const onBackToDetails = vi.fn();
+    render(<EditDocumentModal document={documentMock} updateDocumentFn={updateDocumentFn} onDocumentUpdated={onDocumentUpdated} onBackToDetails={onBackToDetails} />);
+    fireEvent.click(screen.getByRole("button", { name: "Remover etiqueta financeiro" }));
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    await screen.findByText(/Documento editado com sucesso|campo que não pode ser modificado/);
+    expect(onBackToDetails).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Voltar aos detalhes" }));
+    expect(onBackToDetails).toHaveBeenCalledTimes(1);
+    expect(updateDocumentFn).toHaveBeenCalledWith(10, { etiquetas: [] });
+    expect(onDocumentUpdated).toHaveBeenCalledWith({ ...documentMock, etiquetas: [] });
+    expect(window.alert).not.toHaveBeenCalled();
+  });
+
+  it("alerta no retorno 400 e volta aos detalhes sem aplicar a edição", async () => {
+    const updateDocumentFn = vi.fn().mockRejectedValue({ response: { status: 400 } });
+    const onDocumentUpdated = vi.fn();
+    const onBackToDetails = vi.fn();
+    render(<EditDocumentModal document={documentMock} updateDocumentFn={updateDocumentFn} onDocumentUpdated={onDocumentUpdated} onBackToDetails={onBackToDetails} />);
+    fireEvent.change(screen.getByLabelText("Nome do documento *"), { target: { value: "Alterado.pdf" } });
+    fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    await screen.findByText(/Documento editado com sucesso|campo que não pode ser modificado/);
+    expect(onBackToDetails).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Voltar aos detalhes" }));
+    expect(onBackToDetails).toHaveBeenCalledTimes(1);
+    expect(window.alert).not.toHaveBeenCalled();
+    expect(onDocumentUpdated).not.toHaveBeenCalled();
+  });
+
+  it("mostra o sucesso e retorna automaticamente aos detalhes atualizados", async () => {
+    vi.useFakeTimers();
+    const onDocumentUpdated = vi.fn();
+    const onBackToDetails = vi.fn();
+    render(
+      <EditDocumentModal
+        document={documentMock}
+        updateDocumentFn={vi.fn().mockResolvedValue("")}
+        onDocumentUpdated={onDocumentUpdated}
+        onBackToDetails={onBackToDetails}
+      />
+    );
+    fireEvent.change(screen.getByLabelText("Nome do documento *"), {
+      target: { value: "Atualizado.pdf" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
+    });
+    expect(screen.getByText("Documento editado com sucesso.")).toBeInTheDocument();
+    expect(onBackToDetails).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1800));
+    expect(onDocumentUpdated).toHaveBeenCalledWith({ ...documentMock, nome: "Atualizado.pdf" });
     expect(onBackToDetails).toHaveBeenCalledTimes(1);
   });
 
@@ -163,9 +225,6 @@ describe("EditDocumentModal", () => {
     fireEvent.change(screen.getByLabelText("Nome do documento *"), {
       target: { value: "Relatório atualizado" },
     });
-    fireEvent.change(screen.getByLabelText("Setor responsável *"), {
-      target: { value: "juridico" },
-    });
     fireEvent.change(screen.getByLabelText("Nível de acesso *"), {
       target: { value: "operador" },
     });
@@ -175,12 +234,11 @@ describe("EditDocumentModal", () => {
     await waitFor(() => {
       expect(updateDocumentFn).toHaveBeenCalledWith(10, {
         nome: "Relatório atualizado",
-        setor: "juridico",
         nivel: "operador",
-        etiquetas: [1],
       });
     });
 
+    fireEvent.click(await screen.findByRole("button", { name: "Voltar aos detalhes" }));
     expect(onDocumentUpdated).toHaveBeenCalled();
   });
 
@@ -242,40 +300,8 @@ describe("EditDocumentModal", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("valida setor obrigatório antes de enviar", async () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
-    const updateDocumentFn = vi.fn();
-
-    render(
-      <EditDocumentModal
-        document={{ ...documentMock, setor: "" }}
-        onClose={vi.fn()}
-        onBackToDetails={vi.fn()}
-        updateDocumentFn={updateDocumentFn}
-      />
-    );
-
-    const submitButton = screen.getByRole("button", {
-      name: "Salvar alterações",
-    });
-    const form = submitButton.closest("form");
-
-    // Desativa a validação nativa do HTML5 (o select tem required)
-    // para garantir que o onSubmit do React rode mesmo com setor vazio.
-    form.noValidate = true;
-
-    fireEvent.click(submitButton);
-
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith(
-        "O setor responsável é obrigatório."
-      );
-    });
-    expect(updateDocumentFn).not.toHaveBeenCalled();
-  });
 
   it("alerta quando o documento não tem id para edição", () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     const updateDocumentFn = vi.fn();
 
     render(
@@ -289,9 +315,7 @@ describe("EditDocumentModal", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      "Não foi possível identificar o documento para edição."
-    );
+    expect(screen.getByText(/obrigatório|identificar o documento|Nenhuma altera/)).toHaveTextContent("Não foi possível identificar o documento para edição.");
     expect(updateDocumentFn).not.toHaveBeenCalled();
   });
 
@@ -309,6 +333,7 @@ describe("EditDocumentModal", () => {
       />
     );
 
+    fireEvent.change(screen.getByLabelText("Nome do documento *"), { target: { value: "Alterado.pdf" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -330,6 +355,7 @@ describe("EditDocumentModal", () => {
       />
     );
 
+    fireEvent.change(screen.getByLabelText("Nome do documento *"), { target: { value: "Alterado.pdf" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Network error"
@@ -348,6 +374,7 @@ describe("EditDocumentModal", () => {
       />
     );
 
+    fireEvent.change(screen.getByLabelText("Nome do documento *"), { target: { value: "Alterado.pdf" } });
     fireEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Não foi possível salvar as alterações."
@@ -497,19 +524,6 @@ describe("EditDocumentModal", () => {
     expect(screen.queryByText("financeiro")).not.toBeInTheDocument();
   });
 
-  it("reconhece o setor NAO_ATRIBUIDO", () => {
-    render(
-      <EditDocumentModal
-        document={{ ...documentMock, setor: "NAO_ATRIBUIDO" }}
-        onClose={vi.fn()}
-        onBackToDetails={vi.fn()}
-      />
-    );
-
-    expect(screen.getByLabelText("Setor responsável *")).toHaveValue(
-      "NAO_ATRIBUIDO"
-    );
-  });
 
   it("não busca etiquetas quando a busca tem menos de 2 caracteres", async () => {
     const fetchTagsFn = vi.fn();
