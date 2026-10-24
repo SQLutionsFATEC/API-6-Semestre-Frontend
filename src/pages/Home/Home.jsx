@@ -255,12 +255,12 @@ function Home({ documentsRefreshKey = 0 }) {
     setDocumentDetailsLoading(false);
     setDocumentDetailsError(null);
 
-    loadDocumentDetails(document.id_documento, document);
+    void loadDocumentDetails(document.id_documento, document);
   }
 
   function handleRetryDocumentDetails() {
     if (selectedDocument?.id_documento) {
-      loadDocumentDetails(
+      void loadDocumentDetails(
         selectedDocument.id_documento,
         selectedDocument
       );
@@ -304,7 +304,7 @@ function Home({ documentsRefreshKey = 0 }) {
     );
 
     setIsEditModalOpen(false);
-    loadDocumentDetails(updatedDocument.id_documento, updatedDocument);
+    void loadDocumentDetails(updatedDocument.id_documento, updatedDocument);
   }
 
   function handleUserUpdated(updatedUser) {
