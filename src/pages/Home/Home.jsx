@@ -86,8 +86,8 @@ function Home({ documentsRefreshKey = 0 }) {
         setCurrentUser({
           name: userData.nome,
           email: userData.email,
-          role: userData.nivel_acesso,
-          level: userData.setor,
+          role: userData.setor,
+          level: userData.nivel_acesso,
         });
       } catch (err) {
         console.error("Erro ao carregar perfil do usuário:", err);
