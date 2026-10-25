@@ -11,14 +11,6 @@ import {
 import { fetchTags, updateDocument } from "../../../services/documentService";
 import "./EditDocumentModal.css";
 
-const SETORES = [
-  { value: "tecnico", label: "Técnico" },
-  { value: "normativo", label: "Normativo" },
-  { value: "juridico", label: "Jurídico" },
-  { value: "qualitativo", label: "Qualitativo" },
-  { value: "NAO_ATRIBUIDO", label: "Não atribuído" },
-];
-
 const NIVEIS_ACESSO = [
   { value: "basico", label: "Básico" },
   { value: "comercial", label: "Comercial" },
@@ -46,10 +38,6 @@ function findOptionValue(value, options, fallback = "") {
 
   if (option) return option.value;
 
-  if (String(value).toUpperCase() === "NAO_ATRIBUIDO") {
-    return "NAO_ATRIBUIDO";
-  }
-
   return fallback;
 }
 
@@ -72,9 +60,6 @@ function EditDocumentModal({
   fetchTagsFn = fetchTags,
 }) {
   const [name, setName] = useState(document?.nome || "");
-  const [sector, setSector] = useState(
-    findOptionValue(document?.setor, SETORES)
-  );
   const [accessLevel, setAccessLevel] = useState(
     findOptionValue(document?.nivel, NIVEIS_ACESSO, "basico")
   );
@@ -92,6 +77,25 @@ function EditDocumentModal({
   const [loadingTags, setLoadingTags] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState(null);
+
+  function confirmFeedback() {
+    setFeedback(null);
+    if (feedback.updatedDocument) onDocumentUpdated?.(feedback.updatedDocument);
+    if (feedback.returnToDetails) onBackToDetails?.();
+  }
+
+  useEffect(() => {
+    if (feedback?.type !== "success") return;
+
+    const timer = setTimeout(() => {
+      setFeedback(null);
+      onDocumentUpdated?.(feedback.updatedDocument);
+      onBackToDetails?.();
+    }, 1800);
+
+    return () => clearTimeout(timer);
+  }, [feedback, onDocumentUpdated, onBackToDetails]);
 
   useEffect(() => {
     let cancelled = false;
@@ -186,24 +190,40 @@ function EditDocumentModal({
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (saving) return;
+    setFeedback(null);
+    setError("");
 
     if (!name.trim()) {
-      window.alert("O nome do documento é obrigatório.");
-      return;
-    }
-
-    if (!sector) {
-      window.alert("O setor responsável é obrigatório.");
+      setFeedback({ type: "error", title: "Confira o nome", message: "O nome do documento é obrigatório." });
       return;
     }
 
     if (!accessLevel) {
-      window.alert("O nível de acesso é obrigatório.");
+      setFeedback({ type: "error", title: "Selecione o nível de acesso", message: "O nível de acesso é obrigatório." });
       return;
     }
 
     if (!document?.id_documento) {
-      window.alert("Não foi possível identificar o documento para edição.");
+      setFeedback({ type: "error", title: "Documento não identificado", message: "Não foi possível identificar o documento para edição." });
+      return;
+    }
+
+    const payload = {};
+    if (name.trim() !== document.nome) payload.nome = name.trim();
+    if (accessLevel !== findOptionValue(document.nivel, NIVEIS_ACESSO, "basico")) {
+      payload.nivel = accessLevel;
+    }
+    const tagValues = selectedTags.map((tag) => tag.id_etiqueta ?? tag.nome);
+    const originalTagValues = (document.etiquetas || [])
+      .filter((tag) => getTagName(tag))
+      .map((tag) => getTagId(tag) ?? getTagName(tag));
+    const originalTags = new Set(originalTagValues);
+    if (tagValues.length !== originalTagValues.length || tagValues.some((tag) => !originalTags.has(tag))) {
+      payload.etiquetas = tagValues;
+    }
+    if (Object.keys(payload).length === 0) {
+      setFeedback({ type: "error", title: "Tudo continua igual", message: "Nenhuma alteração foi realizada.", returnToDetails: true });
       return;
     }
 
@@ -211,29 +231,23 @@ function EditDocumentModal({
     setError("");
 
     try {
-      const payload = {
-        nome: name.trim(),
-        setor: sector,
-        nivel: accessLevel,
-        etiquetas: selectedTags.map(
-          (tag) => tag.id_etiqueta ?? tag.nome
-        ),
-      };
-
       const updatedDocument = await updateDocumentFn(
         document.id_documento,
         payload
       );
 
-      if (onDocumentUpdated) {
-        onDocumentUpdated({
-          ...document,
-          ...updatedDocument,
-          ...payload,
-          etiquetas: selectedTags,
-        });
-      }
+      const savedDocument = {
+        ...document,
+        ...payload,
+        etiquetas: selectedTags,
+        ...updatedDocument,
+      };
+      setFeedback({ type: "success", title: "Alterações salvas!", message: "Documento editado com sucesso.", returnToDetails: true, updatedDocument: savedDocument });
     } catch (err) {
+      if (err?.response?.status === 400) {
+        setFeedback({ type: "error", title: "Não foi possível salvar", message: "Você tentou modificar um campo que não pode ser modificado.", returnToDetails: true });
+        return;
+      }
       setError(
         err?.response?.data?.detail ||
           err?.message ||
@@ -251,7 +265,10 @@ function EditDocumentModal({
       aria-modal="true"
       aria-labelledby="edit-document-title"
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose?.();
+        if (!saving && event.target === event.currentTarget) {
+          if (feedback?.updatedDocument) confirmFeedback();
+          else onClose?.();
+        }
       }}
     >
       <section className="edit-document-modal">
@@ -268,7 +285,8 @@ function EditDocumentModal({
           <button
             type="button"
             className="edit-document-close"
-            onClick={onClose}
+            onClick={feedback?.updatedDocument ? confirmFeedback : onClose}
+            disabled={saving}
             aria-label="Fechar edição"
           >
             <FiX size={20} />
@@ -296,30 +314,11 @@ function EditDocumentModal({
             <input
               id="edit-document-name"
               value={name}
+              disabled={saving}
               onChange={(event) => setName(event.target.value)}
               required
             />
           </div>
-
-          <div className="edit-document-fields-row">
-            <div className="edit-document-field">
-              <label htmlFor="edit-document-sector">
-                Setor responsável *
-              </label>
-              <select
-                id="edit-document-sector"
-                value={sector}
-                onChange={(event) => setSector(event.target.value)}
-                required
-              >
-                <option value="">Selecione um setor</option>
-                {SETORES.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-            </div>
 
             <div className="edit-document-field">
               <label htmlFor="edit-document-level">
@@ -328,6 +327,7 @@ function EditDocumentModal({
               <select
                 id="edit-document-level"
                 value={accessLevel}
+                disabled={saving}
                 onChange={(event) => setAccessLevel(event.target.value)}
                 required
               >
@@ -339,7 +339,6 @@ function EditDocumentModal({
                 ))}
               </select>
             </div>
-          </div>
 
           <div className="edit-document-field">
             <label htmlFor="edit-document-tags">Etiquetas</label>
@@ -353,6 +352,7 @@ function EditDocumentModal({
                   {tag.nome}
                   <button
                     type="button"
+                    disabled={saving}
                     onClick={() => handleRemoveTag(tag)}
                     aria-label={`Remover etiqueta ${tag.nome}`}
                   >
@@ -364,6 +364,7 @@ function EditDocumentModal({
               <input
                 id="edit-document-tags"
                 value={tagSearch}
+                disabled={saving}
                 onChange={handleTagSearchChange}
                 onFocus={() => setShowTagOptions(true)}
                 onKeyDown={(event) => {
@@ -392,6 +393,7 @@ function EditDocumentModal({
                   tagOptions.map((tag, index) => (
                     <button
                       type="button"
+                      disabled={saving}
                       role="option"
                       aria-selected="false"
                       key={`${getTagId(tag) ?? getTagName(tag)}-${index}`}
@@ -420,6 +422,15 @@ function EditDocumentModal({
             </span>
           </div>
 
+          {feedback && (
+            <p
+              className={`edit-document-feedback edit-document-feedback-${feedback.type || "info"}`}
+              role={feedback.type === "error" ? "alert" : "status"}
+            >
+              {feedback.message}
+            </p>
+          )}
+
           {error && (
             <p className="edit-document-error" role="alert">
               {error}
@@ -430,7 +441,7 @@ function EditDocumentModal({
             <button
               type="button"
               className="edit-document-back"
-              onClick={onBackToDetails}
+              onClick={feedback?.returnToDetails ? confirmFeedback : onBackToDetails}
               disabled={saving}
             >
               <FiArrowLeft size={16} />
@@ -441,7 +452,7 @@ function EditDocumentModal({
               <button
                 type="button"
                 className="edit-document-cancel"
-                onClick={onClose}
+                onClick={feedback?.updatedDocument ? confirmFeedback : onClose}
                 disabled={saving}
               >
                 Cancelar
@@ -450,7 +461,7 @@ function EditDocumentModal({
               <button
                 type="submit"
                 className="edit-document-save"
-                disabled={saving}
+                disabled={saving || feedback?.type === "success"}
               >
                 {saving && (
                   <FiLoader className="edit-document-spinner" />

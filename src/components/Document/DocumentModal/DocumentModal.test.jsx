@@ -133,7 +133,7 @@ describe("DocumentModal", () => {
     renderModal({
       document: { ...documentData, tipo_arquivo: undefined },
     });
-    expect(screen.getByText("ARQUIVO")).toBeInTheDocument();
+    expect(screen.getByText("ARQUIVO", { selector: ".modal-pdf-badge" })).toBeInTheDocument();
   });
 
   it("formata a data de atualizacao e trata valores invalidos", () => {
@@ -390,21 +390,21 @@ describe("DocumentModal", () => {
     renderModal({
       document: { ...documentData, tipo_arquivo: ".docx" },
     });
-    expect(screen.getByText("DOCX")).toBeInTheDocument();
+    expect(screen.getByText("DOCX", { selector: ".modal-pdf-badge" })).toBeInTheDocument();
   });
 
   it("usa extensao quando tipo_arquivo está ausente", () => {
     renderModal({
       document: { ...documentData, tipo_arquivo: undefined, extensao: "xlsx" },
     });
-    expect(screen.getByText("XLSX")).toBeInTheDocument();
+    expect(screen.getByText("XLSX", { selector: ".modal-pdf-badge" })).toBeInTheDocument();
   });
 
   it("usa ARQUIVO quando tipo_arquivo é string vazia", () => {
     renderModal({
       document: { ...documentData, tipo_arquivo: "   " },
     });
-    expect(screen.getByText("ARQUIVO")).toBeInTheDocument();
+    expect(screen.getByText("ARQUIVO", { selector: ".modal-pdf-badge" })).toBeInTheDocument();
   });
 
   it("usa url_arquivo quando arquivo_url está ausente", () => {

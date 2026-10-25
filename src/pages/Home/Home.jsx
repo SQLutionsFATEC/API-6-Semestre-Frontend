@@ -26,6 +26,7 @@ import { clearLocalSession } from "../../services/keycloak";
 import { deleteOwnAccount, fetchUserProfile } from "../../services/userService";
 
 import "./Home.css";
+import { keycloak } from "../../services/keycloak";
 
 const EMPTY_FILTERS = {
   tags: [],
@@ -57,6 +58,7 @@ function Home({ documentsRefreshKey = 0 }) {
   const [documentDetailsError, setDocumentDetailsError] = useState(null);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editPermissionError, setEditPermissionError] = useState("");
   const [restrictedModalOpen, setRestrictedModalOpen] = useState(false);
   const [pdfViewerDocument, setPdfViewerDocument] = useState(null);
 
@@ -265,6 +267,7 @@ function Home({ documentsRefreshKey = 0 }) {
   }
 
   function handleOpenDocument(document) {
+    setEditPermissionError("");
     detailRequestId.current += 1;
 
     setIsEditModalOpen(false);
@@ -272,12 +275,12 @@ function Home({ documentsRefreshKey = 0 }) {
     setDocumentDetailsLoading(false);
     setDocumentDetailsError(null);
 
-    loadDocumentDetails(document.id_documento, document);
+    void loadDocumentDetails(document.id_documento, document);
   }
 
   function handleRetryDocumentDetails() {
     if (selectedDocument?.id_documento) {
-      loadDocumentDetails(
+      void loadDocumentDetails(
         selectedDocument.id_documento,
         selectedDocument
       );
@@ -287,6 +290,14 @@ function Home({ documentsRefreshKey = 0 }) {
   function handleEditDocument(document) {
     if (document?.acesso_permitido === false) return;
 
+    const isOperator = keycloak.hasRealmRole("operador") ||
+      keycloak.tokenParsed?.realm_access?.roles?.includes("operador");
+    if (!isOperator) {
+      setEditPermissionError("Somente usuários com a role Operador podem editar documentos. Solicite a um operador que faça a alteração.");
+      return;
+    }
+
+    setEditPermissionError("");
     setIsEditModalOpen(true);
   }
 
@@ -313,6 +324,7 @@ function Home({ documentsRefreshKey = 0 }) {
     );
 
     setIsEditModalOpen(false);
+    void loadDocumentDetails(updatedDocument.id_documento, updatedDocument);
   }
 
   function handleUserUpdated(updatedUser) {
@@ -471,6 +483,7 @@ function Home({ documentsRefreshKey = 0 }) {
           onRetry={handleRetryDocumentDetails}
           onViewPdf={handleViewPdf}
           onEdit={handleEditDocument}
+          editPermissionError={editPermissionError}
         />
       )}
 

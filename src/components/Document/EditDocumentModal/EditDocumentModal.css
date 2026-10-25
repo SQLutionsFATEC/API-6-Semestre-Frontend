@@ -333,6 +333,29 @@
   animation: edit-document-spin 1s linear infinite;
 }
 
+.edit-document-feedback {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.edit-document-feedback-error {
+  border-color: #fecaca;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.edit-document-feedback-success {
+  border-color: #a7f3d0;
+  color: #047857;
+  background: #ecfdf5;
+}
+
 @keyframes edit-document-spin {
   to {
     transform: rotate(360deg);
