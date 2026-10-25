@@ -13,11 +13,21 @@ import {
   fetchDocumentById,
   fetchDocuments,
 } from "../../services/documentService";
+import { clearLocalSession } from "../../services/keycloak";
+import { deleteOwnAccount } from "../../services/userService";
 
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
   fetchDocumentById: vi.fn(),
   createDocument: vi.fn(),
+}));
+
+vi.mock("../../services/userService", () => ({
+  deleteOwnAccount: vi.fn(),
+}));
+
+vi.mock("../../services/keycloak", () => ({
+  clearLocalSession: vi.fn(),
 }));
 
 vi.mock("../../components/SearchBar/SearchBar", () => ({
@@ -206,6 +216,20 @@ async function loadHome() {
   await advanceSearchDebounce();
 }
 
+function openUserModal() {
+  fireEvent.click(
+    screen.getByRole("button", { name: "Abrir perfil do usuário" })
+  );
+}
+
+async function confirmAccountDeletion() {
+  await act(async () => {
+    fireEvent.click(screen.getByText("Confirmar"));
+    await flushPromises();
+    await flushPromises();
+  });
+}
+
 function openDocument(name = "Manual.pdf") {
   fireEvent.click(
     screen.getByRole("button", {
@@ -224,6 +248,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
@@ -555,6 +580,69 @@ describe("Home", () => {
 
     expect(screen.getByTestId("document-modal")).not.toHaveTextContent(
       "Resposta antiga.pdf"
+    );
+  });
+
+  it("exclui a conta do usuário e descarta a credencial local", async () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    deleteOwnAccount.mockResolvedValue(undefined);
+
+    await loadHome();
+    openUserModal();
+    fireEvent.click(screen.getByText(/Excluir minha conta/i));
+
+    await confirmAccountDeletion();
+
+    expect(deleteOwnAccount).toHaveBeenCalledTimes(1);
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Sua conta foi excluída com sucesso."
+    );
+    expect(clearLocalSession).toHaveBeenCalledTimes(1);
+    expect(alertSpy.mock.invocationCallOrder[0]).toBeLessThan(
+      clearLocalSession.mock.invocationCallOrder[0]
+    );
+    expect(
+      screen.queryByText(/Deseja excluir sua conta/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("avisa sobre a falha e mantém a confirmação aberta quando a exclusão não é concluída", async () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    deleteOwnAccount.mockRejectedValue({
+      response: { data: { detail: "Falha de comunicação com o Keycloak." } },
+    });
+
+    await loadHome();
+    openUserModal();
+    fireEvent.click(screen.getByText(/Excluir minha conta/i));
+
+    await confirmAccountDeletion();
+
+    expect(deleteOwnAccount).toHaveBeenCalledTimes(1);
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Falha de comunicação com o Keycloak."
+    );
+    expect(clearLocalSession).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/Deseja excluir sua conta/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText("Confirmar")).toBeEnabled();
+  });
+
+  it("usa a mensagem padrão quando a falha não traz detalhe do backend", async () => {
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    deleteOwnAccount.mockRejectedValue(new Error("Erro de rede"));
+
+    await loadHome();
+    openUserModal();
+    fireEvent.click(screen.getByText(/Excluir minha conta/i));
+
+    await confirmAccountDeletion();
+
+    expect(alertSpy).toHaveBeenCalledWith(
+      "Não foi possível excluir sua conta. Tente novamente mais tarde."
     );
   });
 });

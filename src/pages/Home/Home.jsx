@@ -21,6 +21,8 @@ import {
   fetchDocumentById,
   fetchDocuments,
 } from "../../services/documentService";
+import { clearLocalSession } from "../../services/keycloak";
+import { deleteOwnAccount } from "../../services/userService";
 
 import "./Home.css";
 
@@ -302,10 +304,23 @@ function Home({ documentsRefreshKey = 0 }) {
     }));
   }
 
-  function handleUserDeleted() {
-    console.log("Conta excluída (simulação).");
-    setCurrentUser(MOCK_CURRENT_USER);
-    setIsUserModalOpen(false);
+  async function handleUserDeleted() {
+    try {
+      await deleteOwnAccount();
+    } catch (err) {
+      console.error("Erro ao excluir a conta:", err);
+
+      window.alert(
+        err?.response?.data?.detail ||
+          "Não foi possível excluir sua conta. Tente novamente mais tarde."
+      );
+
+      // Mantém a confirmação aberta para que o usuário possa tentar de novo.
+      throw err;
+    }
+
+    window.alert("Sua conta foi excluída com sucesso.");
+    clearLocalSession();
   }
 
   return (
