@@ -14,7 +14,10 @@ import {
   fetchDocuments,
 } from "../../services/documentService";
 import { clearLocalSession } from "../../services/keycloak";
-import { deleteOwnAccount } from "../../services/userService";
+import {
+  deleteOwnAccount,
+  fetchUserProfile,
+} from "../../services/userService";
 
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
@@ -24,6 +27,8 @@ vi.mock("../../services/documentService", () => ({
 
 vi.mock("../../services/userService", () => ({
   deleteOwnAccount: vi.fn(),
+  fetchUserProfile: vi.fn(),
+  updateProfile: vi.fn(),
 }));
 
 vi.mock("../../services/keycloak", () => ({
@@ -191,6 +196,13 @@ const selectedFilters = {
   data_atualizacao: "2026-10-01",
 };
 
+const MOCK_USER_PROFILE = {
+  nome: "Usuário Teste",
+  email: "teste@teste.com",
+  nivel_acesso: "basico",
+  setor: "tecnico",
+};
+
 async function advanceSearchDebounce() {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(500);
@@ -245,6 +257,7 @@ beforeEach(() => {
 
   fetchDocuments.mockResolvedValue(documentsPage);
   fetchDocumentById.mockResolvedValue(documentDetail);
+  fetchUserProfile.mockResolvedValue(MOCK_USER_PROFILE);
 });
 
 afterEach(() => {
