@@ -10,6 +10,11 @@ import {
 import { updateProfile } from "../../services/userService";
 import "./UserModal.css";
 
+const capitalizar = (texto) => {
+  if (!texto || texto === "—") return texto;
+  return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
+};
+
 function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen }) {
   const [mode, setMode] = useState("view");
   const [formData, setFormData] = useState({ name: user?.name ?? "", email: user?.email ?? "" });
@@ -135,11 +140,11 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
               <div className="info-row-inline">
                 <div className="info-block">
                   <span className="info-label">Cargo</span>
-                  <span className="info-badge">{user.role}</span>
+                  <span className="info-badge">{capitalizar(user.role)}</span>
                 </div>
                 <div className="info-block">
                   <span className="info-label">Nível de Acesso</span>
-                  <span className="info-badge">{user.level}</span>
+                  <span className="info-badge">{capitalizar(user.level)}</span>
                 </div>
               </div>
             </div>
