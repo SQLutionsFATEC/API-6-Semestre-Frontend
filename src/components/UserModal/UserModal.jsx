@@ -17,6 +17,7 @@ const MOCK_USER = {
 
 function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen }) {
   const [mode, setMode] = useState("view");
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({ name: user?.name ?? "", email: user?.email ?? "" });
   const [errors, setErrors] = useState({});
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
@@ -85,9 +86,18 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
   const handleDeleteClick = () => setMode("delete");
   const handleCancelDelete = () => setMode("view");
 
-  function handleConfirmDelete() {
-    if (onUserDeleted) onUserDeleted();
-    onClose();
+  async function handleConfirmDelete() {
+    if (deleting) return;
+
+    setDeleting(true);
+
+    try {
+      if (onUserDeleted) await onUserDeleted();
+      onClose();
+    } catch {
+      // O feedback de erro é exibido pelo componente que executa a exclusão.
+      setDeleting(false);
+    }
   }
 
   return (
@@ -207,13 +217,15 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
                 type="button"
                 className="btn-confirm-delete"
                 onClick={handleConfirmDelete}
+                disabled={deleting}
               >
-                Confirmar
+                {deleting ? "Excluindo..." : "Confirmar"}
               </button>
               <button
                 type="button"
                 className="btn-cancel-delete"
                 onClick={handleCancelDelete}
+                disabled={deleting}
               >
                 Cancelar
               </button>
