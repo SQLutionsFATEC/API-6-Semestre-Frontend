@@ -11,7 +11,7 @@ function Pagination({
 
   return (
     <div className="pagination-container">
-
+      <span className="pagination-label">Páginas</span>
       <div className="pagination">
         <button
           className="arrow-button"
