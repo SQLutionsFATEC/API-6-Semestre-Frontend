@@ -21,6 +21,7 @@ import {
   fetchDocumentById,
   fetchDocuments,
 } from "../../services/documentService";
+import { fetchUserProfile } from "../../services/userService";
 
 import "./Home.css";
 
@@ -28,13 +29,6 @@ const EMPTY_FILTERS = {
   tags: [],
   tipo: [],
   data_atualizacao: "",
-};
-
-const MOCK_CURRENT_USER = {
-  name: "Chico Soluções",
-  email: "ChicoLutions@gmail.com",
-  role: "Técnico",
-  level: "Nível 1",
 };
 
 function Home({ documentsRefreshKey = 0 }) {
@@ -66,10 +60,14 @@ function Home({ documentsRefreshKey = 0 }) {
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(MOCK_CURRENT_USER);
+  
+  const [currentUser, setCurrentUser] = useState({
+    name: "Carregando...",
+    email: "",
+    role: "—",
+    level: "—",
+  });
 
-  // Invalida respostas antigas quando outra requisição de detalhes começa
-  // ou quando o modal de detalhes é fechado.
   const [refreshKey, setRefreshKey] = useState(0);
   const detailRequestId = useRef(0);
 
@@ -79,6 +77,27 @@ function Home({ documentsRefreshKey = 0 }) {
 
   const handleClosePdfViewer = useCallback(() => {
     setPdfViewerDocument(null);
+  }, []);
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const userData = await fetchUserProfile();
+        setCurrentUser({
+          name: userData.nome,
+          email: userData.email,
+          role: userData.setor,
+          level: userData.nivel_acesso,
+        });
+      } catch (err) {
+        console.error("Erro ao carregar perfil do usuário:", err);
+        setCurrentUser({ name: "Usuário", email: "—", role: "—", level: "—" });
+      }
+    }
+
+    loadUser().catch((err) => {
+      console.error("Erro inesperado ao carregar usuário:", err);
+    });
   }, []);
 
   useEffect(() => {
@@ -104,7 +123,6 @@ function Home({ documentsRefreshKey = 0 }) {
           if (searchMode === "nome") {
             queryParams.nome = trimmedSearch;
           } else if (searchMode === "tags") {
-            // Mantém o nome do parâmetro utilizado na versão direita.
             queryParams.etiquetas = trimmedSearch;
           } else if (searchMode === "conteudo") {
             queryParams.contexto = trimmedSearch;
@@ -303,8 +321,9 @@ function Home({ documentsRefreshKey = 0 }) {
   }
 
   function handleUserDeleted() {
-    console.log("Conta excluída (simulação).");
-    setCurrentUser(MOCK_CURRENT_USER);
+    console.log("Conta excluída.");
+    // 👈 Limpa o usuário da tela em vez de voltar para o mock
+    setCurrentUser({ name: "Usuário", email: "—", role: "—", level: "—" });
     setIsUserModalOpen(false);
   }
 

@@ -5,20 +5,21 @@ import {
   FiEdit2,
   FiTrash2,
   FiAlertCircle,
+  FiLoader,
 } from "react-icons/fi";
+import { updateProfile, fetchUserProfile } from "../../services/userService";
 import "./UserModal.css";
 
-const MOCK_USER = {
-  name: "Nome do usuário",
-  email: "NomeUltimoNome@gmail.com",
-  role: "Técnico",
-  level: "Nível 1",
+const capitalizar = (texto) => {
+  if (!texto || texto === "—") return texto;
+  return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
 };
 
 function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen }) {
   const [mode, setMode] = useState("view");
   const [formData, setFormData] = useState({ name: user?.name ?? "", email: user?.email ?? "" });
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
   const [prevUser, setPrevUser] = useState(user);
 
@@ -60,27 +61,57 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
     }
   };
 
-  function handleSave() {
-    const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = "O nome não pode estar vazio.";
-    if (!formData.email.trim()) newErrors.email = "O email não pode estar vazio.";
+  const handleSave = async () => {
+    setErrors({});
+    setIsSubmitting(true);
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    const payload = {};
+    if (formData.name.trim() !== user.name) payload.nome = formData.name.trim();
+    if (formData.email.trim() !== user.email) payload.email = formData.email.trim();
+
+    if (Object.keys(payload).length === 0) {
+      setMode("view");
+      setIsSubmitting(false);
       return;
     }
 
-    setErrors({});
+    try {
+      await updateProfile(payload);
+      
+      const updatedUser = await fetchUserProfile();
 
-    if (onUserUpdated) {
-      onUserUpdated({
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-      });
+      alert("Perfil atualizado com sucesso!");
+      
+      if (onUserUpdated) {
+        onUserUpdated({
+          name: updatedUser.nome,
+          email: updatedUser.email,
+          role: updatedUser.setor,
+          level: updatedUser.nivel_acesso,
+        });
+      }
+      setMode("view");
+      
+    } catch (err) {
+      console.error(err);
+      
+      if (err.response?.status === 400) {
+        const apiErrors = err.response.data;
+        const mappedErrors = {};
+        if (apiErrors.nome) mappedErrors.name = apiErrors.nome[0];
+        if (apiErrors.email) mappedErrors.email = apiErrors.email[0];
+        
+        setErrors(mappedErrors);
+        alert("Erro de validação. Verifique os campos.");
+      } else if (err.response?.status === 401) {
+        alert("Sessão expirada. Faça login novamente.");
+      } else {
+        alert("Ocorreu um erro ao atualizar o perfil.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setMode("view");
-  }
+  };
 
   const handleDeleteClick = () => setMode("delete");
   const handleCancelDelete = () => setMode("view");
@@ -113,11 +144,11 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
               <div className="info-row-inline">
                 <div className="info-block">
                   <span className="info-label">Cargo</span>
-                  <span className="info-badge">{user.role}</span>
+                  <span className="info-badge">{capitalizar(user.role)}</span>
                 </div>
                 <div className="info-block">
                   <span className="info-label">Nível de Acesso</span>
-                  <span className="info-badge">{user.level}</span>
+                  <span className="info-badge">{capitalizar(user.level)}</span>
                 </div>
               </div>
             </div>
@@ -154,6 +185,7 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
                 onChange={handleInputChange}
                 className={`edit-input edit-name ${errors.name ? "input-error" : ""}`}
                 placeholder="Nome"
+                disabled={isSubmitting}
               />
             </div>
 
@@ -169,6 +201,7 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
                   onChange={handleInputChange}
                   className={`edit-input ${errors.email ? "input-error" : ""}`}
                   placeholder="email@exemplo.com"
+                  disabled={isSubmitting}
                 />
                 {errors.email && (
                   <span className="error-text">
@@ -189,11 +222,18 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
                 type="button"
                 className="btn-cancel"
                 onClick={handleCancelEdit}
+                disabled={isSubmitting}
               >
                 Cancelar
               </button>
-              <button type="button" className="btn-save" onClick={handleSave}>
-                <FiEdit2 size={14} /> Concluir edição
+              <button 
+                type="button" 
+                className="btn-save" 
+                onClick={handleSave}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <FiLoader className="animate-spin" size={14} /> : <FiEdit2 size={14} />}
+                {isSubmitting ? "Salvando..." : "Concluir edição"}
               </button>
             </div>
           </>
@@ -228,7 +268,7 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
 function UserModal({
   isOpen,
   onClose,
-  user = MOCK_USER,
+  user = { name: "Nome", email: "email@email.com", role: "Técnico", level: "Nível 1" },
   onUserUpdated,
   onUserDeleted,
 }) {
