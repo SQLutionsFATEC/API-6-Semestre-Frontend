@@ -583,8 +583,7 @@ describe("Home", () => {
     );
   });
 
-  it("exclui a conta do usuário e descarta a credencial local", async () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+  it("exclui a conta, exibe o feedback e encerra a sessão só ao concluir", async () => {
     deleteOwnAccount.mockResolvedValue(undefined);
 
     await loadHome();
@@ -594,20 +593,23 @@ describe("Home", () => {
     await confirmAccountDeletion();
 
     expect(deleteOwnAccount).toHaveBeenCalledTimes(1);
-    expect(alertSpy).toHaveBeenCalledWith(
-      "Sua conta foi excluída com sucesso."
+    expect(
+      screen.getByRole("alertdialog", { name: "Conta excluída com sucesso" })
+    ).toHaveTextContent(
+      "Seus dados foram removidos e sua sessão local será encerrada."
     );
+    expect(clearLocalSession).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Concluir" }));
+
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(clearLocalSession).toHaveBeenCalledTimes(1);
-    expect(alertSpy.mock.invocationCallOrder[0]).toBeLessThan(
-      clearLocalSession.mock.invocationCallOrder[0]
-    );
     expect(
       screen.queryByText(/Deseja excluir sua conta/i)
     ).not.toBeInTheDocument();
   });
 
-  it("avisa sobre a falha e mantém a confirmação aberta quando a exclusão não é concluída", async () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+  it("exibe o erro do backend e mantém a confirmação aberta quando a exclusão falha", async () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     deleteOwnAccount.mockRejectedValue({
       response: { data: { detail: "Falha de comunicação com o Keycloak." } },
@@ -620,9 +622,14 @@ describe("Home", () => {
     await confirmAccountDeletion();
 
     expect(deleteOwnAccount).toHaveBeenCalledTimes(1);
-    expect(alertSpy).toHaveBeenCalledWith(
-      "Falha de comunicação com o Keycloak."
-    );
+    expect(
+      screen.getByRole("alertdialog", {
+        name: "Não foi possível excluir sua conta",
+      })
+    ).toHaveTextContent("Falha de comunicação com o Keycloak.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Entendi" }));
+
     expect(clearLocalSession).not.toHaveBeenCalled();
     expect(
       screen.getByText(/Deseja excluir sua conta/i)
@@ -631,7 +638,6 @@ describe("Home", () => {
   });
 
   it("usa a mensagem padrão quando a falha não traz detalhe do backend", async () => {
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
     deleteOwnAccount.mockRejectedValue(new Error("Erro de rede"));
 
@@ -641,8 +647,10 @@ describe("Home", () => {
 
     await confirmAccountDeletion();
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      "Não foi possível excluir sua conta. Tente novamente mais tarde."
-    );
+    expect(
+      screen.getByRole("alertdialog", {
+        name: "Não foi possível excluir sua conta",
+      })
+    ).toHaveTextContent("Tente novamente mais tarde.");
   });
 });
