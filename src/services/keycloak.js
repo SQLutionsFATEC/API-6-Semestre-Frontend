@@ -51,7 +51,14 @@ export async function getAccessToken() {
   return keycloak.token;
 }
 
-export function restartLoginAfterUnauthorized() {
+// A credencial local é o token mantido em memória pelo keycloak-js.
+// Após a exclusão da conta o token não representa mais um usuário válido,
+// então ele é descartado e o usuário volta para o login.
+export function clearLocalSession() {
   keycloak.clearToken();
   redirectToLogin();
+}
+
+export function restartLoginAfterUnauthorized() {
+  clearLocalSession();
 }
