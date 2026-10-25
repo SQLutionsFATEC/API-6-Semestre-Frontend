@@ -7,7 +7,7 @@ import {
   FiAlertCircle,
   FiLoader,
 } from "react-icons/fi";
-import { updateProfile } from "../../services/userService";
+import { updateProfile, fetchUserProfile } from "../../services/userService";
 import "./UserModal.css";
 
 const capitalizar = (texto) => {
@@ -78,12 +78,16 @@ function UserModalContent({ onClose, user, onUserUpdated, onUserDeleted, isOpen 
     try {
       await updateProfile(payload);
       
+      const updatedUser = await fetchUserProfile();
+
       alert("Perfil atualizado com sucesso!");
       
       if (onUserUpdated) {
         onUserUpdated({
-          name: formData.name.trim(),
-          email: formData.email.trim(),
+          name: updatedUser.nome,
+          email: updatedUser.email,
+          role: updatedUser.setor,
+          level: updatedUser.nivel_acesso,
         });
       }
       setMode("view");
