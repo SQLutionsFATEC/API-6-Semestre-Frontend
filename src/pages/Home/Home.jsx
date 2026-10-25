@@ -6,6 +6,7 @@ import {
 } from "react-icons/fi";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import AlertModal from "../../components/AlertModal/AlertModal";
 import DocumentList from "../../components/Document/DocumentList/DocumentList";
 import DocumentModal from "../../components/Document/DocumentModal/DocumentModal";
 import EditDocumentModal from "../../components/Document/EditDocumentModal/EditDocumentModal";
@@ -21,7 +22,8 @@ import {
   fetchDocumentById,
   fetchDocuments,
 } from "../../services/documentService";
-import { fetchUserProfile } from "../../services/userService";
+import { clearLocalSession } from "../../services/keycloak";
+import { deleteOwnAccount, fetchUserProfile } from "../../services/userService";
 
 import "./Home.css";
 
@@ -60,13 +62,13 @@ function Home({ documentsRefreshKey = 0 }) {
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  
   const [currentUser, setCurrentUser] = useState({
     name: "Carregando...",
     email: "",
     role: "—",
     level: "—",
   });
+  const [userDeletionFeedback, setUserDeletionFeedback] = useState(null);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const detailRequestId = useRef(0);
@@ -320,11 +322,42 @@ function Home({ documentsRefreshKey = 0 }) {
     }));
   }
 
-  function handleUserDeleted() {
-    console.log("Conta excluída.");
-    // 👈 Limpa o usuário da tela em vez de voltar para o mock
-    setCurrentUser({ name: "Usuário", email: "—", role: "—", level: "—" });
-    setIsUserModalOpen(false);
+  async function handleUserDeleted() {
+    try {
+      await deleteOwnAccount();
+    } catch (err) {
+      console.error("Erro ao excluir a conta:", err);
+
+      setUserDeletionFeedback({
+        type: "error",
+        title: "Não foi possível excluir sua conta",
+        message:
+          typeof err?.response?.data?.detail === "string"
+            ? err.response.data.detail
+            : "Tente novamente mais tarde.",
+      });
+
+      // Mantém a confirmação aberta para que o usuário possa tentar de novo.
+      throw err;
+    }
+
+    setUserDeletionFeedback({
+      type: "success",
+      title: "Conta excluída com sucesso",
+      message:
+        "Seus dados foram removidos e sua sessão local será encerrada.",
+    });
+  }
+
+  function handleCloseUserDeletionFeedback() {
+    const feedback = userDeletionFeedback;
+
+    setUserDeletionFeedback(null);
+
+    // Só encerra a sessão depois que o usuário viu o retorno da exclusão.
+    if (feedback?.type === "success") {
+      clearLocalSession();
+    }
   }
 
   return (
@@ -467,6 +500,14 @@ function Home({ documentsRefreshKey = 0 }) {
         user={currentUser}
         onUserUpdated={handleUserUpdated}
         onUserDeleted={handleUserDeleted}
+      />
+
+      <AlertModal
+        isOpen={Boolean(userDeletionFeedback)}
+        type={userDeletionFeedback?.type}
+        title={userDeletionFeedback?.title}
+        message={userDeletionFeedback?.message}
+        onClose={handleCloseUserDeletionFeedback}
       />
 
       <UploadModal

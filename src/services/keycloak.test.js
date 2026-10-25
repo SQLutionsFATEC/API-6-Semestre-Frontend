@@ -57,6 +57,16 @@ describe("Keycloak authentication", () => {
     expect(client.login).toHaveBeenCalledOnce();
   });
 
+  it("discards the local credential and restarts login after the account is deleted", async () => {
+    await vi.resetModules();
+    const auth = await import("./keycloak");
+
+    auth.clearLocalSession();
+
+    expect(client.clearToken).toHaveBeenCalledOnce();
+    expect(client.login).toHaveBeenCalledOnce();
+  });
+
   it("clears the token and restarts login when an expired token cannot be renewed", async () => {
     await vi.resetModules();
     client.updateToken.mockRejectedValueOnce(

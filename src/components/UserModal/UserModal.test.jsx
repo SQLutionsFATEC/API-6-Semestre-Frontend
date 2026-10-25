@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import UserModal from "./UserModal";
 import * as userService from "../../services/userService";
@@ -161,5 +161,89 @@ describe("UserModal", () => {
       expect(userService.updateProfile).not.toHaveBeenCalled();
       expect(screen.getByText(/Editar informações/i)).toBeInTheDocument();
     });
+  });
+
+  it("confirma a exclusão chamando onUserDeleted e onClose", async () => {
+    const onUserDeleted = vi.fn().mockResolvedValue(undefined);
+    const onClose = vi.fn();
+
+    render(
+      <UserModal
+        isOpen={true}
+        onClose={onClose}
+        user={mockUser}
+        onUserDeleted={onUserDeleted}
+      />
+    );
+    fireEvent.click(screen.getByText(/Excluir minha conta/i));
+    fireEvent.click(screen.getByText("Confirmar"));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(onUserDeleted).toHaveBeenCalledTimes(1);
+  });
+
+  it("confirma exclusão chamando onClose mesmo sem onUserDeleted fornecido", async () => {
+    const onClose = vi.fn();
+
+    render(<UserModal isOpen={true} onClose={onClose} user={mockUser} />);
+    fireEvent.click(screen.getByText(/Excluir minha conta/i));
+    fireEvent.click(screen.getByText("Confirmar"));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it("desabilita as ações enquanto a exclusão está em andamento", async () => {
+    let resolveDeletion;
+    const onUserDeleted = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveDeletion = resolve;
+        })
+    );
+    const onClose = vi.fn();
+
+    render(
+      <UserModal
+        isOpen={true}
+        onClose={onClose}
+        user={mockUser}
+        onUserDeleted={onUserDeleted}
+      />
+    );
+    fireEvent.click(screen.getByText(/Excluir minha conta/i));
+    fireEvent.click(screen.getByText("Confirmar"));
+
+    expect(screen.getByText("Excluindo...")).toBeDisabled();
+    expect(screen.getByText("Cancelar")).toBeDisabled();
+    expect(onClose).not.toHaveBeenCalled();
+
+    await act(async () => {
+      resolveDeletion();
+    });
+
+    expect(onUserDeleted).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("mantém a confirmação aberta e reabilita as ações quando a exclusão falha", async () => {
+    const onUserDeleted = vi.fn().mockRejectedValue(new Error("Falha"));
+    const onClose = vi.fn();
+
+    render(
+      <UserModal
+        isOpen={true}
+        onClose={onClose}
+        user={mockUser}
+        onUserDeleted={onUserDeleted}
+      />
+    );
+    fireEvent.click(screen.getByText(/Excluir minha conta/i));
+    fireEvent.click(screen.getByText("Confirmar"));
+
+    await waitFor(() => expect(onUserDeleted).toHaveBeenCalledTimes(1));
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText(/Deseja excluir sua conta/i)).toBeInTheDocument();
+    expect(screen.getByText("Confirmar")).toBeEnabled();
   });
 });

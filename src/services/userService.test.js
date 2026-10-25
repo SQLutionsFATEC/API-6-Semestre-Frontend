@@ -1,9 +1,15 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import api from "./api";
-import { updateProfile, fetchUserProfile } from "./userService";
+import {
+  deleteOwnAccount,
+  fetchUserProfile,
+  updateProfile,
+} from "./userService";
 
 vi.mock("./api", () => ({
   default: {
+    delete: vi.fn(),
     patch: vi.fn(),
     get: vi.fn(),
     interceptors: {
@@ -17,11 +23,31 @@ describe("userService", () => {
     vi.clearAllMocks();
   });
 
+  describe("deleteOwnAccount", () => {
+    it("deleta a conta do usuário autenticado", async () => {
+      const response = { status: 204 };
+      api.delete.mockResolvedValue(response);
+
+      await expect(deleteOwnAccount()).resolves.toBeUndefined();
+
+      expect(api.delete).toHaveBeenCalledWith("/api/usuarios/");
+    });
+
+    it("propaga o erro quando a exclusão da conta falha", async () => {
+      const error = new Error("Falha ao excluir a conta");
+      api.delete.mockRejectedValue(error);
+
+      await expect(deleteOwnAccount()).rejects.toThrow(
+        "Falha ao excluir a conta"
+      );
+    });
+  });
+
   describe("updateProfile", () => {
     it("faz uma requisição PATCH para /api/usuarios/ com os dados informados", async () => {
       const mockData = { nome: "Novo Nome", email: "novo@email.com" };
       const mockResponse = { id: 1, ...mockData };
-      
+
       api.patch.mockResolvedValue({ data: mockResponse });
 
       const result = await updateProfile(mockData);
@@ -34,7 +60,9 @@ describe("userService", () => {
       const mockError = new Error("Erro de rede");
       api.patch.mockRejectedValue(mockError);
 
-      await expect(updateProfile({ nome: "Teste" })).rejects.toThrow("Erro de rede");
+      await expect(updateProfile({ nome: "Teste" })).rejects.toThrow(
+        "Erro de rede"
+      );
     });
   });
 
@@ -46,7 +74,7 @@ describe("userService", () => {
         nivel_acesso: "basico",
         setor: "tecnico",
       };
-      
+
       api.get.mockResolvedValue({ data: mockResponse });
 
       const result = await fetchUserProfile();
@@ -59,7 +87,9 @@ describe("userService", () => {
       const mockError = new Error("Falha ao buscar perfil");
       api.get.mockRejectedValue(mockError);
 
-      await expect(fetchUserProfile()).rejects.toThrow("Falha ao buscar perfil");
+      await expect(fetchUserProfile()).rejects.toThrow(
+        "Falha ao buscar perfil"
+      );
     });
   });
 });
