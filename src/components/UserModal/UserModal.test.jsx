@@ -5,6 +5,7 @@ import * as userService from "../../services/userService";
 
 vi.mock("../../services/userService", () => ({
   updateProfile: vi.fn(),
+  fetchUserProfile: vi.fn(),
 }));
 
 describe("UserModal", () => {
@@ -113,9 +114,13 @@ describe("UserModal", () => {
   });
 
   it("salva as alterações com sucesso, exibe alert e chama onUserUpdated", async () => {
-    userService.updateProfile.mockResolvedValueOnce({
+    userService.updateProfile.mockResolvedValueOnce({});
+    
+    userService.fetchUserProfile.mockResolvedValueOnce({
       nome: "Carlos Souza",
       email: "joao@teste.com",
+      setor: "Tecnico",
+      nivel_acesso: "basico",
     });
 
     const onUserUpdated = vi.fn();
@@ -135,10 +140,14 @@ describe("UserModal", () => {
 
     await waitFor(() => {
       expect(userService.updateProfile).toHaveBeenCalledWith({ nome: "Carlos Souza" });
+      
       expect(window.alert).toHaveBeenCalledWith("Perfil atualizado com sucesso!");
+      
       expect(onUserUpdated).toHaveBeenCalledWith({
         name: "Carlos Souza",
         email: "joao@teste.com",
+        role: "Tecnico",
+        level: "basico",
       });
     });
   });
