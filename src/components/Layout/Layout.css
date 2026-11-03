@@ -1,0 +1,17 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.layout-content {
+  flex: 1;
+  min-width: 0;
+  padding: 36px 36px 28px;
+}
+
+@media (max-width: 900px) {
+  .layout-content {
+    padding: 24px 18px 20px;
+  }
+}
