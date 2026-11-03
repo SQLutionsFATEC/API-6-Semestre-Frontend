@@ -1,43 +1,43 @@
 .terms-modal-backdrop {
   position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.45);
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1100;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1100;
+
   padding: 20px;
+  background-color: rgba(15, 23, 42, 0.45);
+
   animation: fadeIn 0.15s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 .terms-modal-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 24px 28px 24px 28px;
   width: 100%;
   max-width: 540px;
-  border: 2px solid #c9a5b0;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+  box-sizing: border-box;
+
   display: flex;
   flex-direction: column;
   gap: 18px;
+
+  padding: 24px;
+  background: #ffffff;
+  border: 2px solid #c9a5b0;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+
   animation: scaleIn 0.15s ease;
 }
 
-@keyframes scaleIn {
-  from { transform: scale(0.96); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
 .terms-header {
-  text-align: center;
-  border-bottom: 1px solid #d6b8c1;
   padding-bottom: 14px;
+  border-bottom: 1px solid #d6b8c1;
+  text-align: center;
 }
 
 .terms-title {
@@ -62,14 +62,17 @@
 
 .term-label {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+
   padding: 10px 14px;
+  background-color: #ffffff;
   border: 1px solid #a5b0c9;
   border-radius: 4px;
+
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
-  background-color: #ffffff;
 }
 
 .term-label:hover {
@@ -84,20 +87,21 @@
 .term-checkbox {
   width: 18px;
   height: 18px;
+  margin-left: 12px;
+  flex-shrink: 0;
+
   cursor: pointer;
   accent-color: #7A0026;
   outline: 1px solid #a5b0c9;
   outline-offset: 1px;
   border-radius: 2px;
-  flex-shrink: 0;
-  margin-left: 12px;
 }
 
 .term-error {
-  font-size: 12px;
-  color: #b91c1c;
-  font-weight: 400;
   padding-left: 2px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #b91c1c;
 }
 
 .terms-footer {
@@ -108,16 +112,18 @@
 }
 
 .btn-recusar {
+  min-width: 130px;
   padding: 8px 28px;
+
+  border: 1px solid #94a3b8;
   border-radius: 9999px;
+  background-color: #ffffff;
+  color: #0f172a;
+
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
-  background-color: #ffffff;
-  color: #0f172a;
-  border: 1px solid #94a3b8;
-  min-width: 130px;
 }
 
 .btn-recusar:hover {
@@ -126,16 +132,18 @@
 }
 
 .btn-aceitar {
+  min-width: 130px;
   padding: 8px 28px;
+
+  border: 1px solid #7A0026;
   border-radius: 9999px;
+  background-color: #7A0026;
+  color: #ffffff;
+
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
-  background-color: #7A0026;
-  color: #ffffff;
-  border: 1px solid #7A0026;
-  min-width: 130px;
 }
 
 .btn-aceitar:hover:not(:disabled) {
@@ -154,10 +162,11 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+  padding: 8px 0;
+
   font-size: 14px;
   color: #334155;
   text-align: center;
-  padding: 8px 0;
 }
 
 .terms-warning-body p {
@@ -166,6 +175,16 @@
 }
 
 .terms-warning-body strong {
-  color: #0f172a;
   font-weight: 700;
+  color: #0f172a;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
