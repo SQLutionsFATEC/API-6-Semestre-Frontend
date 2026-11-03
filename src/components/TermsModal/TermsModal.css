@@ -1,182 +1,99 @@
+@reference "../../index.css";
+
 .terms-modal-backdrop {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 1100;
+  @apply fixed inset-0 z-[1100];
 
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  @apply flex items-center justify-center;
 
-  padding: 20px;
-  background-color: rgba(15, 23, 42, 0.45);
+  @apply p-5 bg-slate-900/45;
 
   animation: fadeIn 0.15s ease;
 }
 
 .terms-modal-card {
-  width: 100%;
-  max-width: 540px;
-  box-sizing: border-box;
+  @apply w-full max-w-[540px] box-border;
 
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  @apply flex flex-col gap-[18px];
 
-  padding: 24px;
-  background: #ffffff;
-  border: 2px solid #c9a5b0;
-  border-radius: 16px;
+  @apply p-6 bg-white border-2 border-[#c9a5b0] rounded-2xl;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
 
   animation: scaleIn 0.15s ease;
 }
 
 .terms-header {
-  padding-bottom: 14px;
-  border-bottom: 1px solid #d6b8c1;
-  text-align: center;
+  @apply pb-3.5 border-b border-[#d6b8c1] text-center;
 }
 
 .terms-title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 500;
-  color: #4a1a2c;
-  letter-spacing: -0.01em;
+  @apply m-0 text-[22px] font-medium tracking-[-0.01em] text-[#4a1a2c];
 }
 
 .terms-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  @apply flex flex-col gap-3.5;
 }
 
 .term-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  @apply flex flex-col gap-1;
 }
 
 .term-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-sizing: border-box;
+  @apply flex items-center justify-between box-border;
 
-  padding: 10px 14px;
-  background-color: #ffffff;
-  border: 1px solid #a5b0c9;
-  border-radius: 4px;
+  @apply px-3.5 py-2.5 bg-white border border-[#a5b0c9] rounded;
 
-  cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.term-label:hover {
-  background-color: #f8fafc;
+  @apply cursor-pointer transition-colors duration-150 ease-in-out hover:bg-slate-50;
 }
 
 .term-description {
-  font-size: 14px;
-  color: #334155;
+  @apply text-sm text-slate-700;
 }
 
 .term-checkbox {
-  width: 18px;
-  height: 18px;
-  margin-left: 12px;
-  flex-shrink: 0;
+  @apply w-[18px] h-[18px] ml-3 shrink-0;
 
-  cursor: pointer;
-  accent-color: #7A0026;
-  outline: 1px solid #a5b0c9;
-  outline-offset: 1px;
-  border-radius: 2px;
+  @apply cursor-pointer accent-[#7A0026] outline outline-1 outline-offset-1 outline-[#a5b0c9] rounded-sm;
 }
 
 .term-error {
-  padding-left: 2px;
-  font-size: 12px;
-  font-weight: 400;
-  color: #b91c1c;
+  @apply pl-0.5 text-xs font-normal text-red-700;
 }
 
 .terms-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 10px;
+  @apply flex justify-between gap-3 pt-2.5;
 }
 
 .btn-recusar {
-  min-width: 130px;
-  padding: 8px 28px;
+  @apply min-w-[130px] px-7 py-2;
 
-  border: 1px solid #94a3b8;
-  border-radius: 9999px;
-  background-color: #ffffff;
-  color: #0f172a;
+  @apply bg-white text-slate-900 border border-slate-400 rounded-full;
 
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-recusar:hover {
-  background-color: #f8fafc;
-  border-color: #64748b;
+  @apply text-sm font-medium cursor-pointer transition-all duration-150 ease-in-out;
+  @apply hover:bg-slate-50 hover:border-slate-500;
 }
 
 .btn-aceitar {
-  min-width: 130px;
-  padding: 8px 28px;
+  @apply min-w-[130px] px-7 py-2;
 
-  border: 1px solid #7A0026;
-  border-radius: 9999px;
-  background-color: #7A0026;
-  color: #ffffff;
+  @apply bg-[#7A0026] text-white border border-[#7A0026] rounded-full;
 
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-aceitar:hover:not(:disabled) {
-  background-color: #5e001d;
-  border-color: #5e001d;
-}
-
-.btn-aceitar:disabled {
-  background-color: #c9a5b0;
-  border-color: #c9a5b0;
-  cursor: not-allowed;
-  opacity: 0.7;
+  @apply text-sm font-semibold cursor-pointer transition-all duration-150 ease-in-out;
+  @apply hover:bg-[#5e001d] hover:border-[#5e001d];
+  @apply disabled:bg-[#c9a5b0] disabled:border-[#c9a5b0] disabled:cursor-not-allowed disabled:opacity-70;
 }
 
 .terms-warning-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 8px 0;
+  @apply flex flex-col gap-3.5 py-2;
 
-  font-size: 14px;
-  color: #334155;
-  text-align: center;
+  @apply text-sm text-slate-700 text-center;
 }
 
 .terms-warning-body p {
-  margin: 0;
-  line-height: 1.5;
+  @apply m-0 leading-relaxed;
 }
 
 .terms-warning-body strong {
-  font-weight: 700;
-  color: #0f172a;
+  @apply font-bold text-slate-900;
 }
 
 @keyframes fadeIn {
