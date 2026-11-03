@@ -17,6 +17,7 @@ import Pagination from "../../components/Pagination/Pagination";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import UserModal from "../../components/UserModal/UserModal";
 import UploadModal from "../../components/Document/UploadModal/UploadModal";
+import TermsModal from "../../components/TermsModal/TermsModal";
 
 import {
   fetchDocumentById,
@@ -24,6 +25,11 @@ import {
 } from "../../services/documentService";
 import { clearLocalSession } from "../../services/keycloak";
 import { deleteOwnAccount, fetchUserProfile } from "../../services/userService";
+import {
+  fetchTerms,
+  acceptTerms,
+  anonymizeAccount,
+} from "../../services/termsService";
 
 import "./Home.css";
 import { keycloak } from "../../services/keycloak";
@@ -71,6 +77,8 @@ function Home({ documentsRefreshKey = 0 }) {
     level: "—",
   });
   const [userDeletionFeedback, setUserDeletionFeedback] = useState(null);
+  const [terms, setTerms] = useState([]);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const detailRequestId = useRef(0);
@@ -84,7 +92,7 @@ function Home({ documentsRefreshKey = 0 }) {
   }, []);
 
   useEffect(() => {
-    async function loadUser() {
+    async function loadUserAndTerms() {
       try {
         const userData = await fetchUserProfile();
         setCurrentUser({
@@ -93,14 +101,21 @@ function Home({ documentsRefreshKey = 0 }) {
           role: userData.setor,
           level: userData.nivel_acesso,
         });
+
+        const fetchedTerms = await fetchTerms();
+        setTerms(fetchedTerms);
+
+        if (fetchedTerms && fetchedTerms.length > 0) {
+          setIsTermsModalOpen(true);
+        }
       } catch (err) {
-        console.error("Erro ao carregar perfil do usuário:", err);
+        console.error("Erro ao carregar perfil ou termos:", err);
         setCurrentUser({ name: "Usuário", email: "—", role: "—", level: "—" });
       }
     }
 
-    loadUser().catch((err) => {
-      console.error("Erro inesperado ao carregar usuário:", err);
+    loadUserAndTerms().catch((err) => {
+      console.error("Erro inesperado:", err);
     });
   }, []);
 
@@ -290,10 +305,13 @@ function Home({ documentsRefreshKey = 0 }) {
   function handleEditDocument(document) {
     if (document?.acesso_permitido === false) return;
 
-    const isOperator = keycloak.hasRealmRole("operador") ||
+    const isOperator =
+      keycloak.hasRealmRole("operador") ||
       keycloak.tokenParsed?.realm_access?.roles?.includes("operador");
     if (!isOperator) {
-      setEditPermissionError("Somente usuários com a role Operador podem editar documentos. Solicite a um operador que faça a alteração.");
+      setEditPermissionError(
+        "Somente usuários com a role Operador podem editar documentos. Solicite a um operador que faça a alteração."
+      );
       return;
     }
 
@@ -349,7 +367,7 @@ function Home({ documentsRefreshKey = 0 }) {
             : "Tente novamente mais tarde.",
       });
 
-      // Mantém a confirmação aberta para que o usuário possa tentar de novo.
+            // Mantém a confirmação aberta para que o usuário possa tentar de novo.
       throw err;
     }
 
@@ -366,8 +384,28 @@ function Home({ documentsRefreshKey = 0 }) {
 
     setUserDeletionFeedback(null);
 
-    // Só encerra a sessão depois que o usuário viu o retorno da exclusão.
+        // Só encerra a sessão depois que o usuário viu o retorno da exclusão.
     if (feedback?.type === "success") {
+      clearLocalSession();
+    }
+  }
+
+  async function handleAcceptTerms(acceptedTermIds) {
+    try {
+      await acceptTerms(acceptedTermIds);
+      setIsTermsModalOpen(false);
+    } catch (err) {
+      console.error("Erro ao aceitar os termos:", err);
+    }
+  }
+
+  async function handleDeclineTerms() {
+    try {
+      await anonymizeAccount();
+    } catch (err) {
+      console.error("Erro ao anonimizar conta:", err);
+    } finally {
+      setIsTermsModalOpen(false);
       clearLocalSession();
     }
   }
@@ -431,9 +469,7 @@ function Home({ documentsRefreshKey = 0 }) {
 
       <section className="documents-section">
         {loading && (
-          <p className="loading-message">
-            Carregando documentos...
-          </p>
+          <p className="loading-message">Carregando documentos...</p>
         )}
 
         {error && (
@@ -441,9 +477,7 @@ function Home({ documentsRefreshKey = 0 }) {
             <FiAlertCircle size={22} />
 
             <div className="error-text">
-              <span className="error-title">
-                Erro ao carregar
-              </span>
+              <span className="error-title">Erro ao carregar</span>
               <span className="error-description">{error}</span>
             </div>
           </div>
@@ -534,6 +568,15 @@ function Home({ documentsRefreshKey = 0 }) {
           handleOpenDocument(documentoCriado);
         }}
       />
+
+      {/* Modal de Termos e Condições */}
+      {isTermsModalOpen && terms.length > 0 && (
+        <TermsModal
+          terms={terms}
+          onAccept={handleAcceptTerms}
+          onDecline={handleDeclineTerms}
+        />
+      )}
     </div>
   );
 }
