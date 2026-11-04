@@ -20,10 +20,6 @@ function Sidebar({
 }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-  const isOperator =
-    keycloak.hasRealmRole?.("operador") ||
-    keycloak.tokenParsed?.realm_access?.roles?.includes("operador");
-
   const handleOpenUpload = () => {
     if (onOpenUploadModal) {
       onOpenUploadModal();
