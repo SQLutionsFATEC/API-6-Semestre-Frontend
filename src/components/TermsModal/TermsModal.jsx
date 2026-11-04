@@ -1,5 +1,4 @@
 import { useState } from "react";
-import "./TermsModal.css";
 
 function TermsModal({ terms, onAccept, onDecline }) {
   const [checkedTerms, setCheckedTerms] = useState({});
@@ -28,36 +27,38 @@ function TermsModal({ terms, onAccept, onDecline }) {
 
   if (view === "warning") {
     return (
-      <div className="terms-modal-backdrop">
-        <div className="terms-modal-card">
-          <div className="terms-header">
-            <h2 className="terms-title">Aviso sobre Consentimento</h2>
+      <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/45 p-5">
+        <div className="flex w-full max-w-[540px] flex-col gap-[18px] rounded-2xl border-2 border-[#c9a5b0] bg-white p-6 shadow-[0_20px_40px_rgba(15,23,42,0.15)]">
+          <div className="border-b border-[#d6b8c1] pb-3.5 text-center">
+            <h2 className="m-0 text-[22px] font-medium tracking-[-0.01em] text-[#4a1a2c]">
+              Aviso sobre Consentimento
+            </h2>
           </div>
 
-          <div className="terms-warning-body">
-            <p>
+          <div className="flex flex-col gap-3.5 py-2 text-center text-sm text-slate-700">
+            <p className="m-0 leading-relaxed">
               É necessário estar de acordo com os{" "}
-              <strong>termos obrigatórios</strong> para utilizar a aplicação.
+              <strong className="font-bold text-slate-900">termos obrigatórios</strong> para utilizar a aplicação.
             </p>
-            <p>
+            <p className="m-0 leading-relaxed">
               Você será deslogado e todos os{" "}
-              <strong>seus dados serão anonimizados</strong>, você{" "}
-              <strong>não poderá logar</strong> novamente, deseja atualizar seu
+              <strong className="font-bold text-slate-900">seus dados serão anonimizados</strong>, você{" "}
+              <strong className="font-bold text-slate-900">não poderá logar</strong> novamente, deseja atualizar seu
               consentimento sobre os termos?
             </p>
           </div>
 
-          <div className="terms-footer">
+          <div className="flex justify-between gap-3 pt-2.5">
             <button
               type="button"
-              className="btn-recusar"
+              className="min-w-[130px] rounded-full border border-slate-400 bg-white px-7 py-2 text-sm font-medium text-slate-900 transition-all duration-150 ease-in-out hover:border-slate-500 hover:bg-slate-50"
               onClick={() => setView("terms")}
             >
               Cancelar
             </button>
             <button
               type="button"
-              className="btn-aceitar"
+              className="min-w-[130px] rounded-full border border-[#7A0026] bg-[#7A0026] px-7 py-2 text-sm font-semibold text-white transition-all duration-150 ease-in-out hover:border-[#5e001d] hover:bg-[#5e001d]"
               onClick={onDecline}
             >
               Continuar
@@ -69,26 +70,28 @@ function TermsModal({ terms, onAccept, onDecline }) {
   }
 
   return (
-    <div className="terms-modal-backdrop">
-      <div className="terms-modal-card">
-        <div className="terms-header">
-          <h2 className="terms-title">Termos e Condições - IAzimuth</h2>
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-900/45 p-5">
+      <div className="flex w-full max-w-[540px] flex-col gap-[18px] rounded-2xl border-2 border-[#c9a5b0] bg-white p-6 shadow-[0_20px_40px_rgba(15,23,42,0.15)]">
+        <div className="border-b border-[#d6b8c1] pb-3.5 text-center">
+          <h2 className="m-0 text-[22px] font-medium tracking-[-0.01em] text-[#4a1a2c]">
+            Termos e Condições - IAzimuth
+          </h2>
         </div>
 
-        <div className="terms-body">
+        <div className="flex flex-col gap-3.5">
           {terms.map((term) => (
-            <div key={term.id} className="term-item">
-              <label className="term-label">
-                <span className="term-description">{term.description}</span>
+            <div key={term.id} className="flex flex-col gap-1">
+              <label className="flex cursor-pointer items-center justify-between rounded border border-[#a5b0c9] bg-white px-3.5 py-2.5 transition-colors duration-150 ease-in-out hover:bg-slate-50">
+                <span className="text-sm text-slate-700">{term.description}</span>
                 <input
                   type="checkbox"
-                  className="term-checkbox"
+                  className="ml-3 h-[18px] w-[18px] shrink-0 cursor-pointer rounded-sm accent-[#7A0026] outline outline-1 outline-offset-1 outline-[#a5b0c9]"
                   checked={!!checkedTerms[term.id]}
                   onChange={() => handleCheckboxChange(term.id)}
                 />
               </label>
               {term.required && !checkedTerms[term.id] && (
-                <span className="term-error">
+                <span className="pl-0.5 text-xs font-normal text-red-700">
                   *Este termo é obrigatório para utilizar a aplicação
                 </span>
               )}
@@ -96,17 +99,17 @@ function TermsModal({ terms, onAccept, onDecline }) {
           ))}
         </div>
 
-        <div className="terms-footer">
+        <div className="flex justify-between gap-3 pt-2.5">
           <button
             type="button"
-            className="btn-recusar"
+            className="min-w-[130px] rounded-full border border-slate-400 bg-white px-7 py-2 text-sm font-medium text-slate-900 transition-all duration-150 ease-in-out hover:border-slate-500 hover:bg-slate-50"
             onClick={() => setView("warning")}
           >
             Recusar
           </button>
           <button
             type="button"
-            className="btn-aceitar"
+            className="min-w-[130px] rounded-full border border-[#7A0026] bg-[#7A0026] px-7 py-2 text-sm font-semibold text-white transition-all duration-150 ease-in-out hover:border-[#5e001d] hover:bg-[#5e001d] disabled:cursor-not-allowed disabled:border-[#c9a5b0] disabled:bg-[#c9a5b0] disabled:opacity-70"
             onClick={handleAccept}
             disabled={!allRequiredChecked}
           >
