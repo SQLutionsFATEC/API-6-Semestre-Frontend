@@ -8,6 +8,7 @@ import {
   fetchDocuments,
   updateDocument,
 } from "../../services/documentService";
+import { fetchTerms, acceptTerms } from "../../services/termsService";
 
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
@@ -26,6 +27,12 @@ vi.mock("../../services/userService", () => ({
     setor: "tecnico",
   }),
   updateProfile: vi.fn(),
+}));
+
+vi.mock("../../services/termsService", () => ({
+  fetchTerms: vi.fn(),
+  acceptTerms: vi.fn(),
+  anonymizeAccount: vi.fn(),
 }));
 
 vi.mock("pdfjs-dist", () => ({
@@ -116,6 +123,9 @@ beforeEach(() => {
 
   vi.mocked(fetchDocuments).mockResolvedValue(documentsPage);
   vi.mocked(fetchDocumentById).mockResolvedValue(documentDetail);
+  vi.mocked(fetchTerms).mockResolvedValue([
+    { id: 1, description: "Termo obrigatório", required: true },
+  ]);
 });
 
 afterEach(() => {
@@ -710,9 +720,6 @@ describe("Home", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Voltar aos detalhes" }));
 
-    // Após salvar, o nome aparece no modal de detalhes E no card da lista.
-    // Confirma que a lista (card) foi atualizada, olhando especificamente
-    // para o item com a classe `.document-name`.
     await waitFor(() => {
       const cardNames = Array.from(
         globalThis.document.querySelectorAll(".document-name")
@@ -721,9 +728,35 @@ describe("Home", () => {
       expect(cardNames).toContain("Manual atualizado.pdf");
     });
 
-    // E o modal de detalhes também reflete a atualização.
     await waitFor(() => {
       expect(getModal()?.querySelector(".modal-code")).toHaveTextContent("Manual atualizado.pdf");
     });
+  });
+
+  it("deve exibir o aviso de vazamento após o usuário aceitar os termos", async () => {
+    vi.mocked(acceptTerms).mockResolvedValue({ success: true });
+
+    render(<Home />);
+
+    const checkbox = await screen.findByRole("checkbox", {
+      name: /Termo obrigatório/i,
+    });
+    fireEvent.click(checkbox);
+
+    const acceptButton = screen.getByRole("button", { name: /Aceitar/i });
+    fireEvent.click(acceptButton);
+
+    expect(
+      await screen.findByText(/Aviso de vazamento de Dados/i)
+    ).toBeInTheDocument();
+
+    const closeButton = screen.getByRole("button", {
+      name: /Fechar aviso/i,
+    });
+    fireEvent.click(closeButton);
+
+    expect(
+      screen.queryByText(/Aviso de vazamento de Dados/i)
+    ).not.toBeInTheDocument();
   });
 });

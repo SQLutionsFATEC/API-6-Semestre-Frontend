@@ -18,6 +18,7 @@ import SearchBar from "../../components/SearchBar/SearchBar";
 import UserModal from "../../components/UserModal/UserModal";
 import UploadModal from "../../components/Document/UploadModal/UploadModal";
 import TermsModal from "../../components/TermsModal/TermsModal";
+import LeakWarning from "../../components/LeakWarning/LeakWarning";
 
 import {
   fetchDocumentById,
@@ -77,8 +78,10 @@ function Home({ documentsRefreshKey = 0 }) {
     level: "—",
   });
   const [userDeletionFeedback, setUserDeletionFeedback] = useState(null);
+  
   const [terms, setTerms] = useState([]);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [isLeakWarningOpen, setIsLeakWarningOpen] = useState(false);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const detailRequestId = useRef(0);
@@ -105,8 +108,11 @@ function Home({ documentsRefreshKey = 0 }) {
         const fetchedTerms = await fetchTerms();
         setTerms(fetchedTerms);
 
+
         if (fetchedTerms && fetchedTerms.length > 0) {
           setIsTermsModalOpen(true);
+        } else {
+          setIsLeakWarningOpen(true);
         }
       } catch (err) {
         console.error("Erro ao carregar perfil ou termos:", err);
@@ -367,7 +373,7 @@ function Home({ documentsRefreshKey = 0 }) {
             : "Tente novamente mais tarde.",
       });
 
-            // Mantém a confirmação aberta para que o usuário possa tentar de novo.
+            // Mantém a confirmação aberta para que o usuário possa tentar de novo.      
       throw err;
     }
 
@@ -384,7 +390,7 @@ function Home({ documentsRefreshKey = 0 }) {
 
     setUserDeletionFeedback(null);
 
-        // Só encerra a sessão depois que o usuário viu o retorno da exclusão.
+        // Só encerra a sessão depois que o usuário viu o retorno da exclusão.    
     if (feedback?.type === "success") {
       clearLocalSession();
     }
@@ -394,6 +400,7 @@ function Home({ documentsRefreshKey = 0 }) {
     try {
       await acceptTerms(acceptedTermIds);
       setIsTermsModalOpen(false);
+      setIsLeakWarningOpen(true);
     } catch (err) {
       console.error("Erro ao aceitar os termos:", err);
     }
@@ -575,6 +582,13 @@ function Home({ documentsRefreshKey = 0 }) {
           terms={terms}
           onAccept={handleAcceptTerms}
           onDecline={handleDeclineTerms}
+        />
+      )}
+
+      {/* Modal de Aviso de Vazamento (Aparece após o de Termos) */}
+      {isLeakWarningOpen && (
+        <LeakWarning 
+          onClose={() => setIsLeakWarningOpen(false)} 
         />
       )}
     </div>

@@ -14,6 +14,7 @@ import {
   fetchDocuments,
 } from "../../services/documentService";
 import { clearLocalSession } from "../../services/keycloak";
+import { fetchTerms, acceptTerms } from "../../services/termsService";
 import {
   deleteOwnAccount,
   fetchUserProfile,
@@ -33,6 +34,12 @@ vi.mock("../../services/userService", () => ({
 
 vi.mock("../../services/keycloak", () => ({
   clearLocalSession: vi.fn(),
+}));
+
+vi.mock("../../services/termsService", () => ({
+  fetchTerms: vi.fn(),
+  acceptTerms: vi.fn(),
+  anonymizeAccount: vi.fn(),
 }));
 
 vi.mock("../../components/SearchBar/SearchBar", () => ({
@@ -258,6 +265,9 @@ beforeEach(() => {
   fetchDocuments.mockResolvedValue(documentsPage);
   fetchDocumentById.mockResolvedValue(documentDetail);
   fetchUserProfile.mockResolvedValue(MOCK_USER_PROFILE);
+  fetchTerms.mockResolvedValue([
+    { id: 1, description: "Termo obrigatório", required: true },
+  ]);
 });
 
 afterEach(() => {
@@ -665,5 +675,43 @@ describe("Home", () => {
         name: "Não foi possível excluir sua conta",
       })
     ).toHaveTextContent("Tente novamente mais tarde.");
+  });
+
+  it("deve exibir o aviso de vazamento após o usuário aceitar os termos", async () => {
+    acceptTerms.mockResolvedValue({ success: true });
+
+    render(<Home />);
+
+    // Avança os timers para o fetchTerms do mock (300ms) e o debounce da busca resolverem
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    // O modal de termos deve estar visível
+    const checkbox = screen.getByRole("checkbox", {
+      name: /Termo obrigatório/i,
+    });
+    fireEvent.click(checkbox);
+
+    const acceptButton = screen.getByRole("button", { name: /Aceitar/i });
+    fireEvent.click(acceptButton);
+
+    // Avança os timers para o acceptTerms resolver e atualizar o estado
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(
+      screen.getByText(/Aviso de vazamento de Dados/i)
+    ).toBeInTheDocument();
+
+    const closeButton = screen.getByRole("button", {
+      name: /Fechar aviso/i,
+    });
+    fireEvent.click(closeButton);
+
+    expect(
+      screen.queryByText(/Aviso de vazamento de Dados/i)
+    ).not.toBeInTheDocument();
   });
 });
