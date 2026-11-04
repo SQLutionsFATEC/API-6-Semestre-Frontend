@@ -4,13 +4,20 @@ import {
   FiLogOut,
   FiUploadCloud,
   FiChevronRight,
+  FiClipboard,
 } from "react-icons/fi";
 import { keycloak } from "../../services/keycloak";
 import logo from "../../assets/logo.svg";
 import UploadModal from "../Document/UploadModal/UploadModal";
 import "./Sidebar.css";
 
-function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
+function Sidebar({
+  onOpenUploadModal,
+  onDocumentCreated,
+  isOperator = false,
+  activePage = "documents",
+  onNavigate,
+}) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const isOperator =
@@ -39,10 +46,26 @@ function Sidebar({ onOpenUploadModal, onDocumentCreated }) {
         </div>
 
         <nav className="sidebar-menu">
-          <button className="sidebar-item active">
+          <button
+            type="button"
+            className={`sidebar-item${activePage === "documents" ? " active" : ""}`}
+            aria-current={activePage === "documents" ? "page" : undefined}
+            onClick={() => onNavigate?.("documents")}
+          >
             <FiFileText size={18} />
             Documentos
           </button>
+          {isOperator && (
+            <button
+              type="button"
+              className={`sidebar-item${activePage === "requests" ? " active" : ""}`}
+              aria-current={activePage === "requests" ? "page" : undefined}
+              onClick={() => onNavigate?.("requests")}
+            >
+              <FiClipboard size={18} />
+              Solicitações
+            </button>
+          )}
         </nav>
 
         {isOperator && (

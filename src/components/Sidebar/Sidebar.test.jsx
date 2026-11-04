@@ -23,7 +23,20 @@ describe("Sidebar", () => {
     expect(logoImg).toBeInTheDocument();
   });
 
+<<<<<<< HEAD
   it("renderiza o botão 'Cadastrar documento' acima do botão 'Deslogar' para operadores", () => {
+=======
+  it("mostra solicitações apenas para operadores", () => {
+    const { rerender } = render(<Sidebar isOperator={false} />);
+
+    expect(screen.queryByRole("button", { name: "Solicitações" })).not.toBeInTheDocument();
+
+    rerender(<Sidebar isOperator activePage="requests" />);
+    expect(screen.getByRole("button", { name: "Solicitações" })).toBeInTheDocument();
+  });
+
+  it("renderiza o botão 'Cadastrar documento' acima do botão 'Deslogar'", () => {
+>>>>>>> aaa9fe9 (feat(99): add operator-specific requests button to Sidebar component)
     render(<Sidebar />);
     const uploadBtn = screen.getByRole("button", { name: /Cadastrar documento/i });
     const logoutBtn = screen.getByRole("button", { name: /Deslogar/i });
