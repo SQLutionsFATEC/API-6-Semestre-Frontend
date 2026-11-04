@@ -184,6 +184,35 @@ describe("DocumentModal", () => {
     expect(screen.getByText("Acesso Liberado")).toBeInTheDocument();
   });
 
+  it("mostra solicitar acesso apenas quando o documento é restrito", () => {
+    const { unmount } = renderModal({
+      document: { ...documentData, acesso_permitido: false },
+    });
+    expect(
+      screen.getByRole("button", { name: "Solicitar Acesso" })
+    ).toBeInTheDocument();
+    unmount();
+
+    renderModal({
+      document: { ...documentData, acesso_permitido: true },
+    });
+    expect(
+      screen.queryByRole("button", { name: "Solicitar Acesso" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("exibe um alerta ao solicitar acesso", () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    renderModal({
+      document: { ...documentData, acesso_permitido: false },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Acesso" }));
+    expect(alert).toHaveBeenCalledWith(
+      "Funcionalidade de solicitação de acesso em desenvolvimento."
+    );
+  });
+
   it("desabilita o botão de editar quando o documento é restrito", () => {
     renderModal({
       document: { ...documentData, acesso_permitido: false },

@@ -168,6 +168,10 @@ export default function DocumentModal({
     onEdit(document);
   }
 
+  function handleRequestAccess() {
+    window.alert("Funcionalidade de solicitação de acesso em desenvolvimento.");
+  }
+
   function handleKeyDown(event) {
     if (event.key === "Escape") {
       onClose?.();
@@ -388,6 +392,20 @@ export default function DocumentModal({
           </p>
         )}
         <footer className="modal-actions">
+          {accessRestricted && !loading && !error && (
+            <button
+              type="button"
+              className="mr-auto inline-flex min-h-[42px] cursor-pointer items-center justify-center gap-[9px] rounded-[9px] border border-[#7a0026] bg-[#7a0026] px-4 text-[15px] font-semibold text-white shadow-[0_3px_8px_rgba(122,0,38,0.18)] transition-[background-color,transform] duration-150 hover:-translate-y-px hover:bg-[#60001e] max-md:w-full max-md:text-center"
+              onClick={handleRequestAccess}
+            >
+              <span className="relative inline-flex items-center" aria-hidden="true">
+                <FiFile size={20} />
+                <FiLock className="absolute right-[-2px] bottom-[-1px] rounded-[2px] bg-[#7a0026] p-px" size={10} />
+              </span>
+              Solicitar Acesso
+            </button>
+          )}
+
           <button
             type="button"
             className={`modal-view-button cursor-pointer ${document.acesso_permitido === false ? "modal-view-locked" : ""}`}
