@@ -26,9 +26,9 @@ describe("TermsModal", () => {
       <TermsModal terms={mockTerms} onAccept={vi.fn()} onDecline={vi.fn()} />
     );
 
-    const requiredCheckbox = screen.getByLabelText(
-      /Utilização e coleta de seu nome/i
-    );
+    const requiredCheckbox = screen.getByRole("checkbox", {
+      name: /Utilização e coleta de seu nome/i,
+    });
     fireEvent.click(requiredCheckbox);
 
     const acceptButton = screen.getByRole("button", { name: /Aceitar/i });
@@ -56,10 +56,10 @@ describe("TermsModal", () => {
     );
 
     fireEvent.click(
-      screen.getByLabelText(/Utilização e coleta de seu nome/i)
+      screen.getByRole("checkbox", { name: /Utilização e coleta de seu nome/i })
     );
     fireEvent.click(
-      screen.getByLabelText(/Utilização e coleta de seu e-mail/i)
+      screen.getByRole("checkbox", { name: /Utilização e coleta de seu e-mail/i })
     );
     fireEvent.click(screen.getByRole("button", { name: /Aceitar/i }));
 
