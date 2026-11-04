@@ -191,6 +191,9 @@ describe("DocumentModal", () => {
     expect(
       screen.getByRole("button", { name: "Solicitar Acesso" })
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Visualizar" })
+    ).not.toBeInTheDocument();
     unmount();
 
     renderModal({
@@ -274,7 +277,7 @@ describe("DocumentModal", () => {
     );
   });
 
-  it("não chama onView nem window.open quando doc é restrito e sem onViewPdf", () => {
+  it("não exibe Visualizar nem permite abrir documento restrito sem onViewPdf", () => {
     const onView = vi.fn();
     const windowOpen = vi.spyOn(window, "open").mockImplementation(() => {});
     renderModal({
@@ -283,7 +286,9 @@ describe("DocumentModal", () => {
       document: { ...documentData, acesso_permitido: false },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
+    expect(
+      screen.queryByRole("button", { name: "Visualizar" })
+    ).not.toBeInTheDocument();
     expect(onView).not.toHaveBeenCalled();
     expect(windowOpen).not.toHaveBeenCalled();
   });

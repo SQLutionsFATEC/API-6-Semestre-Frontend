@@ -406,20 +406,18 @@ export default function DocumentModal({
             </button>
           )}
 
-          <button
-            type="button"
-            className={`modal-view-button cursor-pointer ${document.acesso_permitido === false ? "modal-view-locked" : ""}`}
-            disabled={!canView || loading || Boolean(error)}
-            onClick={handleView}
-            aria-label="Visualizar"
-          >
-            {document.acesso_permitido === false ? (
-              <FiLock size={17} aria-hidden="true" />
-            ) : (
+          {!accessRestricted && (
+            <button
+              type="button"
+              className="modal-view-button cursor-pointer"
+              disabled={!canView || loading || Boolean(error)}
+              onClick={handleView}
+              aria-label="Visualizar"
+            >
               <FiEye size={17} aria-hidden="true" />
-            )}
-            Visualizar
-          </button>
+              Visualizar
+            </button>
+          )}
 
           <button
             type="button"
