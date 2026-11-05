@@ -41,15 +41,15 @@ function DocumentItem({ document, onView, onOpenDetails }) {
     }
   };
 
-  const handleActionClick = (e) => {
-    e.stopPropagation();
-
-    if (isRestricted) {
-      if (onView) {
-        onView(document);
-      }
-      return;
+  const handleCardKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      handleCardClick();
     }
+  };
+
+  const handleActionClick = (event) => {
+    event.stopPropagation();
 
     if (onView) {
       onView(document);
@@ -64,6 +64,9 @@ function DocumentItem({ document, onView, onOpenDetails }) {
           : ""
       }`}
       onClick={handleCardClick}
+      onKeyDown={handleCardKeyDown}
+      role="button"
+      tabIndex={0}
     >
       <div className="document-file">
         <span>{document.tipo_arquivo}</span>
