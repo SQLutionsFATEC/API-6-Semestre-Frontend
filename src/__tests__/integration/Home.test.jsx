@@ -598,7 +598,8 @@ describe("Home", () => {
     expect(fetchDocumentById).not.toHaveBeenCalled();
   });
 
-  it("avisa ao tentar visualizar documento restrito e não abre o PDF", async () => {
+  it("solicita acesso para documento restrito sem exibir Visualizar ou abrir o PDF", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     vi.mocked(fetchDocumentById).mockResolvedValue({
       ...documentDetail,
       acesso_permitido: false,
@@ -615,16 +616,15 @@ describe("Home", () => {
       expect(getModal()).toHaveTextContent("Acesso Bloqueado");
     });
 
-    fireEvent.click(getModal().querySelector("footer .modal-view-button"));
+    expect(getModal().querySelector("footer .modal-view-button")).toBeNull();
+    fireEvent.click(getModal().querySelector("footer button"));
 
+    expect(alert).toHaveBeenCalledWith(
+      "Funcionalidade de solicitação de acesso em desenvolvimento."
+    );
+    expect(getModal()).toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", { name: "Acesso Restrito" })
-    ).toBeInTheDocument();
-
-    expect(getModal()).not.toBeInTheDocument();
-
-    expect(
-      screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
+      screen.queryByRole("dialog", { name: /Visualização de Manual do sistema.pdf/ })
     ).not.toBeInTheDocument();
   });
 
