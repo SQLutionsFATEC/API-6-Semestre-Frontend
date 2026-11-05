@@ -1,9 +1,4 @@
-import {
-  FiAlertCircle,
-  FiFileText,
-  FiFilter,
-  FiUser,
-} from "react-icons/fi";
+import { FiAlertCircle, FiFileText, FiFilter } from "react-icons/fi";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import AlertModal from "../../components/AlertModal/AlertModal";
@@ -18,7 +13,9 @@ import SearchBar from "../../components/SearchBar/SearchBar";
 import UserModal from "../../components/UserModal/UserModal";
 import UploadModal from "../../components/Document/UploadModal/UploadModal";
 import TermsModal from "../../components/TermsModal/TermsModal";
+import ConsentManagerModal from "../../components/TermsModal/ConsentManagerModal";
 import LeakWarning from "../../components/LeakWarning/LeakWarning";
+import UserMenu from "../../components/UserMenu/UserMenu";
 
 import {
   fetchDocumentById,
@@ -28,7 +25,9 @@ import { clearLocalSession } from "../../services/keycloak";
 import { deleteOwnAccount, fetchUserProfile } from "../../services/userService";
 import {
   fetchTerms,
+  fetchUserConsents,
   acceptTerms,
+  updateUserConsents,
   anonymizeAccount,
 } from "../../services/termsService";
 
@@ -80,7 +79,9 @@ function Home({ documentsRefreshKey = 0 }) {
   const [userDeletionFeedback, setUserDeletionFeedback] = useState(null);
   
   const [terms, setTerms] = useState([]);
+  const [consents, setConsents] = useState([]);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [isConsentManagerOpen, setIsConsentManagerOpen] = useState(false);
   const [isLeakWarningOpen, setIsLeakWarningOpen] = useState(false);
 
   const [refreshKey, setRefreshKey] = useState(0);
@@ -108,10 +109,16 @@ function Home({ documentsRefreshKey = 0 }) {
         const fetchedTerms = await fetchTerms();
         setTerms(fetchedTerms);
 
+        const userConsents = await fetchUserConsents();
+        setConsents(userConsents);
 
-        if (fetchedTerms && fetchedTerms.length > 0) {
+        const hasPendingRequiredTerm = fetchedTerms.some(
+          (term) => term.required && !userConsents.includes(term.id)
+        );
+
+        if (hasPendingRequiredTerm) {
           setIsTermsModalOpen(true);
-        } else {
+        } else if (fetchedTerms.length === 0) {
           setIsLeakWarningOpen(true);
         }
       } catch (err) {
@@ -399,11 +406,18 @@ function Home({ documentsRefreshKey = 0 }) {
   async function handleAcceptTerms(acceptedTermIds) {
     try {
       await acceptTerms(acceptedTermIds);
+      setConsents(acceptedTermIds);
       setIsTermsModalOpen(false);
       setIsLeakWarningOpen(true);
     } catch (err) {
       console.error("Erro ao aceitar os termos:", err);
     }
+  }
+
+  async function handleSaveConsents(acceptedTermIds) {
+    await updateUserConsents(acceptedTermIds);
+    setConsents(acceptedTermIds);
+    setIsConsentManagerOpen(false);
   }
 
   async function handleDeclineTerms() {
@@ -462,15 +476,11 @@ function Home({ documentsRefreshKey = 0 }) {
             )}
           </button>
 
-          <button
-            type="button"
-            className="user-trigger"
-            onClick={() => setIsUserModalOpen(true)}
-            aria-label="Abrir perfil do usuário"
-          >
-            <FiUser size={18} />
-            <span>{currentUser.name}</span>
-          </button>
+          <UserMenu
+            user={currentUser}
+            onOpenProfile={() => setIsUserModalOpen(true)}
+            onOpenConsent={() => setIsConsentManagerOpen(true)}
+          />
         </div>
       </header>
 
@@ -582,6 +592,15 @@ function Home({ documentsRefreshKey = 0 }) {
           terms={terms}
           onAccept={handleAcceptTerms}
           onDecline={handleDeclineTerms}
+        />
+      )}
+
+      {isConsentManagerOpen && terms.length > 0 && (
+        <ConsentManagerModal
+          terms={terms}
+          acceptedTermIds={consents}
+          onSave={handleSaveConsents}
+          onClose={() => setIsConsentManagerOpen(false)}
         />
       )}
 
