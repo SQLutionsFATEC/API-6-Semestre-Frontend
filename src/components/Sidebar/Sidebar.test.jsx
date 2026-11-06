@@ -23,8 +23,17 @@ describe("Sidebar", () => {
     expect(logoImg).toBeInTheDocument();
   });
 
+  it("mostra solicitações apenas para operadores", () => {
+    const { rerender } = render(<Sidebar isOperator={false} />);
+
+    expect(screen.queryByRole("button", { name: "Solicitações" })).not.toBeInTheDocument();
+
+    rerender(<Sidebar isOperator activePage="requests" />);
+    expect(screen.getByRole("button", { name: "Solicitações" })).toBeInTheDocument();
+  });
+
   it("renderiza o botão 'Cadastrar documento' acima do botão 'Deslogar' para operadores", () => {
-    render(<Sidebar />);
+    render(<Sidebar isOperator />);
     const uploadBtn = screen.getByRole("button", { name: /Cadastrar documento/i });
     const logoutBtn = screen.getByRole("button", { name: /Deslogar/i });
     expect(uploadBtn).toBeInTheDocument();
@@ -33,14 +42,14 @@ describe("Sidebar", () => {
 
   it("chama o callback ao clicar no botão de cadastrar documento", () => {
     const handleOpen = vi.fn();
-    render(<Sidebar onOpenUploadModal={handleOpen} />);
+    render(<Sidebar isOperator onOpenUploadModal={handleOpen} />);
     const uploadBtn = screen.getByRole("button", { name: /Cadastrar documento/i });
     fireEvent.click(uploadBtn);
     expect(handleOpen).toHaveBeenCalledTimes(1);
   });
 
   it("abre e fecha o modal de upload ao clicar no botão de fechar", () => {
-    render(<Sidebar />);
+    render(<Sidebar isOperator />);
     const uploadBtn = screen.getByRole("button", { name: /Cadastrar documento/i });
     fireEvent.click(uploadBtn);
     expect(screen.getByRole("heading", { name: "Cadastrar documento" })).toBeInTheDocument();

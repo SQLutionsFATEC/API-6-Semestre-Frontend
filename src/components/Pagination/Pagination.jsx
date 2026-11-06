@@ -4,13 +4,14 @@ function Pagination({
   currentPage,
   totalPages,
   onPageChange,
+  className = "",
 }) {
   if (totalPages <= 1) {
     return null;
   }
 
   return (
-    <div className="pagination-container">
+    <div className={`pagination-container ${className}`.trim()}>
       <span className="pagination-label">Páginas</span>
       <div className="pagination">
         <button
