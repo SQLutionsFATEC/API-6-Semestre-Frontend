@@ -11,17 +11,41 @@ const MOCK_TERMS = [
   },
 ];
 
-export async function fetchTerms() {
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return MOCK_TERMS;
+// Termos aceitos pelo usuário autenticado (simulação local enquanto não há endpoint).
+let acceptedTermIds = [];
+
+function delay(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export async function acceptTerms(acceptedTermIds) {
-  console.log("✅ [MOCK] Termos aceitos com sucesso:", acceptedTermIds);
-  return { success: true, accepted: acceptedTermIds };
+export async function fetchTerms() {
+  await delay(300);
+  return MOCK_TERMS.map((term) => ({ ...term }));
+}
+
+export async function fetchUserConsents() {
+  await delay(200);
+  return [...acceptedTermIds];
+}
+
+export async function updateUserConsents(termIds) {
+  const knownTermIds = new Set(MOCK_TERMS.map((term) => term.id));
+
+  acceptedTermIds = [
+    ...new Set(termIds.filter((termId) => knownTermIds.has(termId))),
+  ];
+
+  console.log("✅ [MOCK] Consentimentos atualizados com sucesso:", acceptedTermIds);
+
+  return { success: true, accepted: [...acceptedTermIds] };
+}
+
+export async function acceptTerms(acceptedIds) {
+  return updateUserConsents(acceptedIds);
 }
 
 export async function anonymizeAccount() {
+  acceptedTermIds = [];
   console.log("⚠️ [MOCK] Conta anonimizada (simulação)");
   return { success: true };
 }

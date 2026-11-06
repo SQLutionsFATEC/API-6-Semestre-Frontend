@@ -8,7 +8,12 @@ import {
   fetchDocuments,
   updateDocument,
 } from "../../services/documentService";
-import { fetchTerms, acceptTerms } from "../../services/termsService";
+import {
+  fetchTerms,
+  fetchUserConsents,
+  acceptTerms,
+  updateUserConsents,
+} from "../../services/termsService";
 
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
@@ -31,7 +36,9 @@ vi.mock("../../services/userService", () => ({
 
 vi.mock("../../services/termsService", () => ({
   fetchTerms: vi.fn(),
+  fetchUserConsents: vi.fn(),
   acceptTerms: vi.fn(),
+  updateUserConsents: vi.fn(),
   anonymizeAccount: vi.fn(),
 }));
 
@@ -126,6 +133,7 @@ beforeEach(() => {
   vi.mocked(fetchTerms).mockResolvedValue([
     { id: 1, description: "Termo obrigatório", required: true },
   ]);
+  vi.mocked(fetchUserConsents).mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -731,6 +739,51 @@ describe("Home", () => {
     await waitFor(() => {
       expect(getModal()?.querySelector(".modal-code")).toHaveTextContent("Manual atualizado.pdf");
     });
+  });
+
+  it("gerencia consentimentos pelo dropdown do usuário", async () => {
+    vi.mocked(fetchTerms).mockResolvedValue([
+      { id: 1, description: "Termo obrigatório", required: true },
+      { id: 2, description: "Termo opcional", required: false },
+    ]);
+    vi.mocked(fetchUserConsents).mockResolvedValue([1, 2]);
+    vi.mocked(updateUserConsents).mockResolvedValue({
+      success: true,
+      accepted: [1],
+    });
+
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Abrir menu do usuário" })
+    );
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Consentimento" })
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Termos e Condições" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Gerenciar Consentimentos/i })
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /Termo opcional/i })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /Salvar alterações/i })
+    );
+
+    await waitFor(() => {
+      expect(updateUserConsents).toHaveBeenCalledWith([1]);
+    });
+
+    expect(
+      screen.queryByRole("heading", { name: "Termos e Condições" })
+    ).not.toBeInTheDocument();
   });
 
   it("deve exibir o aviso de vazamento após o usuário aceitar os termos", async () => {

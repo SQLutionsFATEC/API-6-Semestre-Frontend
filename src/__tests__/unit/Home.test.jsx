@@ -14,7 +14,12 @@ import {
   fetchDocuments,
 } from "../../services/documentService";
 import { clearLocalSession } from "../../services/keycloak";
-import { fetchTerms, acceptTerms } from "../../services/termsService";
+import {
+  fetchTerms,
+  fetchUserConsents,
+  acceptTerms,
+  updateUserConsents,
+} from "../../services/termsService";
 import {
   deleteOwnAccount,
   fetchUserProfile,
@@ -38,7 +43,9 @@ vi.mock("../../services/keycloak", () => ({
 
 vi.mock("../../services/termsService", () => ({
   fetchTerms: vi.fn(),
+  fetchUserConsents: vi.fn(),
   acceptTerms: vi.fn(),
+  updateUserConsents: vi.fn(),
   anonymizeAccount: vi.fn(),
 }));
 
@@ -235,9 +242,21 @@ async function loadHome() {
   await advanceSearchDebounce();
 }
 
-function openUserModal() {
+function openUserMenu() {
   fireEvent.click(
-    screen.getByRole("button", { name: "Abrir perfil do usuário" })
+    screen.getByRole("button", { name: "Abrir menu do usuário" })
+  );
+}
+
+function openUserModal() {
+  openUserMenu();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Meus dados" }));
+}
+
+function openConsentManager() {
+  openUserMenu();
+  fireEvent.click(
+    screen.getByRole("menuitem", { name: "Consentimento" })
   );
 }
 
@@ -268,6 +287,7 @@ beforeEach(() => {
   fetchTerms.mockResolvedValue([
     { id: 1, description: "Termo obrigatório", required: true },
   ]);
+  fetchUserConsents.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -675,6 +695,66 @@ describe("Home", () => {
         name: "Não foi possível excluir sua conta",
       })
     ).toHaveTextContent("Tente novamente mais tarde.");
+  });
+
+  it("não exibe o modal inicial de termos quando os obrigatórios já foram aceitos", async () => {
+    fetchUserConsents.mockResolvedValue([1]);
+
+    await loadHome();
+
+    expect(
+      screen.queryByRole("button", { name: /Aceitar/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("abre o gerenciamento de consentimentos pelo dropdown do usuário", async () => {
+    fetchUserConsents.mockResolvedValue([1]);
+
+    await loadHome();
+    openConsentManager();
+
+    expect(
+      screen.getByRole("heading", { name: "Termos e Condições" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Gerenciar Consentimentos/i })
+    );
+
+    expect(
+      screen.getByRole("button", { name: /Salvar alterações/i })
+    ).toBeInTheDocument();
+  });
+
+  it("salva os consentimentos alterados pelo gerenciamento", async () => {
+    fetchTerms.mockResolvedValue([
+      { id: 1, description: "Termo obrigatório", required: true },
+      { id: 2, description: "Termo opcional", required: false },
+    ]);
+    fetchUserConsents.mockResolvedValue([1, 2]);
+    updateUserConsents.mockResolvedValue({ success: true, accepted: [1] });
+
+    await loadHome();
+    openConsentManager();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Gerenciar Consentimentos/i })
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /Termo opcional/i })
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: /Salvar alterações/i })
+      );
+      await flushPromises();
+    });
+
+    expect(updateUserConsents).toHaveBeenCalledWith([1]);
+    expect(
+      screen.queryByRole("heading", { name: "Termos e Condições" })
+    ).not.toBeInTheDocument();
   });
 
   it("deve exibir o aviso de vazamento após o usuário aceitar os termos", async () => {
