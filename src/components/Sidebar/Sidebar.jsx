@@ -5,6 +5,7 @@ import {
   FiUploadCloud,
   FiChevronRight,
   FiClipboard,
+  FiMessageCircle,
 } from "react-icons/fi";
 import { keycloak } from "../../services/keycloak";
 import logo from "../../assets/logo.svg";
@@ -50,6 +51,15 @@ function Sidebar({
           >
             <FiFileText size={18} />
             Documentos
+          </button>
+          <button
+            type="button"
+            className={`sidebar-item${activePage === "chat" ? " active" : ""}`}
+            aria-current={activePage === "chat" ? "page" : undefined}
+            onClick={() => onNavigate?.("chat")}
+          >
+            <FiMessageCircle size={18} />
+            Chat
           </button>
           {isOperator && (
             <button

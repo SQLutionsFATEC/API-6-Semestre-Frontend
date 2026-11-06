@@ -18,6 +18,9 @@ vi.mock("./components/Layout/Layout", () => ({
       <button type="button" onClick={() => onNavigate("requests")}>
         Ir para solicitações
       </button>
+      <button type="button" onClick={() => onNavigate("chat")}>
+        Ir para chat
+      </button>
       <button type="button" onClick={onDocumentCreated}>
         Documento criado
       </button>
@@ -34,6 +37,10 @@ vi.mock("./pages/Home/Home", () => ({
 
 vi.mock("./pages/AccessRequests/AccessRequests", () => ({
   default: () => <p>Página de solicitações</p>,
+}));
+
+vi.mock("./pages/Chat/Chat", () => ({
+  default: () => <p>Página de chat</p>,
 }));
 
 describe("App", () => {
@@ -84,6 +91,21 @@ describe("App", () => {
     expect(screen.getByText("Página de documentos: 0")).toBeInTheDocument();
     expect(screen.getByTestId("layout-state")).toHaveTextContent(
       JSON.stringify({ isOperator: false, activePage: "documents" })
+    );
+  });
+
+  it("permite que usuários autenticados naveguem para o chat", () => {
+    keycloak.tokenParsed = {
+      realm_access: { roles: ["usuario"] },
+      resource_access: {},
+    };
+
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Ir para chat" }));
+
+    expect(screen.getByText("Página de chat")).toBeInTheDocument();
+    expect(screen.getByTestId("layout-state")).toHaveTextContent(
+      JSON.stringify({ isOperator: false, activePage: "chat" })
     );
   });
 
