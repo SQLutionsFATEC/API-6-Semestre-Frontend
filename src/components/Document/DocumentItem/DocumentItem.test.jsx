@@ -151,6 +151,65 @@ describe("DocumentItem", () => {
     expect(onOpenDetails).not.toHaveBeenCalled();
   });
 
+  it("abre os detalhes ao pressionar Enter no cartão", () => {
+    const onOpenDetails = vi.fn();
+    const onView = vi.fn();
+    const { container } = render(
+      <DocumentItem
+        document={documentData}
+        onView={onView}
+        onOpenDetails={onOpenDetails}
+      />
+    );
+
+    const card = container.querySelector(".document-item");
+
+    fireEvent.keyDown(card, { key: "Enter" });
+
+    expect(onOpenDetails).toHaveBeenCalledWith(documentData);
+    expect(onView).not.toHaveBeenCalled();
+  });
+
+  it("abre os detalhes ao pressionar Espaço no cartão", () => {
+    const onOpenDetails = vi.fn();
+    const onView = vi.fn();
+    const { container } = render(
+      <DocumentItem
+        document={documentData}
+        onView={onView}
+        onOpenDetails={onOpenDetails}
+      />
+    );
+
+    const card = container.querySelector(".document-item");
+
+    fireEvent.keyDown(card, { key: " " });
+
+    expect(onOpenDetails).toHaveBeenCalledWith(documentData);
+    expect(onView).not.toHaveBeenCalled();
+  });
+
+  it("ignora teclas diferentes de Enter e Espaço no cartão", () => {
+    const onOpenDetails = vi.fn();
+    const onView = vi.fn();
+    const { container } = render(
+      <DocumentItem
+        document={documentData}
+        onView={onView}
+        onOpenDetails={onOpenDetails}
+      />
+    );
+
+    const card = container.querySelector(".document-item");
+
+    fireEvent.keyDown(card, { key: "a" });
+    fireEvent.keyDown(card, { key: "Escape" });
+    fireEvent.keyDown(card, { key: "Tab" });
+
+    expect(onOpenDetails).not.toHaveBeenCalled();
+    expect(onView).not.toHaveBeenCalled();
+  });
+
   it("exibe inequivocamente o ícone de cadeado para documentos restritos", () => {
     const restrictedDoc = {
       ...documentData,
@@ -186,5 +245,39 @@ describe("DocumentItem", () => {
 
     expect(onView).toHaveBeenCalledWith(restrictedDoc);
     expect(onOpenDetails).not.toHaveBeenCalled();
+  });
+
+  it("chama onView como fallback ao clicar no cartão quando não há onOpenDetails", () => {
+    const onView = vi.fn();
+    render(<DocumentItem document={documentData} onView={onView} />);
+
+    fireEvent.click(screen.getByText(documentData.nome));
+
+    expect(onView).toHaveBeenCalledWith(documentData);
+  });
+
+  it("não quebra quando onView e onOpenDetails não são fornecidos", () => {
+    const { container } = render(
+      <DocumentItem document={documentData} />
+    );
+
+    const card = container.querySelector(".document-item");
+
+    expect(() => {
+      fireEvent.click(card);
+      fireEvent.keyDown(card, { key: "Enter" });
+      fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
+    }).not.toThrow();
+  });
+
+  it("expõe o cartão como elemento acessível por teclado", () => {
+    const { container } = render(
+      <DocumentItem document={documentData} onView={vi.fn()} />
+    );
+
+    const card = container.querySelector(".document-item");
+
+    expect(card).toHaveAttribute("role", "button");
+    expect(card).toHaveAttribute("tabindex", "0");
   });
 });

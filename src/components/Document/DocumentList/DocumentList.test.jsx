@@ -4,10 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import DocumentList from "./DocumentList";
 
 vi.mock("../DocumentItem/DocumentItem", () => ({
-  default: ({ document, onView }) => (
+  default: ({ document, onView, onOpenDetails }) => (
     <div data-testid="document-item">
       <span>{document.nome}</span>
       <button onClick={() => onView(document)}>Visualizar</button>
+      <button onClick={() => onOpenDetails(document)}>Detalhes</button>
     </div>
   ),
 }));
@@ -44,7 +45,7 @@ describe("DocumentList", () => {
     ).toBeInTheDocument();
   });
 
-  it("chama onView ao visualizar um documento", async () => {
+  it("chama onView ao visualizar um documento", () => {
     const onView = vi.fn();
     const document = { id_documento: 1, nome: "Documento 1" };
 
@@ -53,5 +54,22 @@ describe("DocumentList", () => {
     fireEvent.click(screen.getByRole("button", { name: "Visualizar" }));
 
     expect(onView).toHaveBeenCalledWith(document);
+  });
+
+  it("chama onOpenDetails ao abrir os detalhes de um documento", () => {
+    const onOpenDetails = vi.fn();
+    const document = { id_documento: 1, nome: "Documento 1" };
+
+    render(
+      <DocumentList
+        documents={[document]}
+        onView={vi.fn()}
+        onOpenDetails={onOpenDetails}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Detalhes" }));
+
+    expect(onOpenDetails).toHaveBeenCalledWith(document);
   });
 });

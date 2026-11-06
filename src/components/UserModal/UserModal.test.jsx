@@ -115,7 +115,7 @@ describe("UserModal", () => {
 
   it("salva as alterações com sucesso, exibe alert e chama onUserUpdated", async () => {
     userService.updateProfile.mockResolvedValueOnce({});
-    
+
     userService.fetchUserProfile.mockResolvedValueOnce({
       nome: "Carlos Souza",
       email: "joao@teste.com",
@@ -126,11 +126,11 @@ describe("UserModal", () => {
     const onUserUpdated = vi.fn();
 
     render(
-      <UserModal 
-        isOpen={true} 
-        onClose={vi.fn()} 
-        user={mockUser} 
-        onUserUpdated={onUserUpdated} 
+      <UserModal
+        isOpen={true}
+        onClose={vi.fn()}
+        user={mockUser}
+        onUserUpdated={onUserUpdated}
       />
     );
 
@@ -140,9 +140,9 @@ describe("UserModal", () => {
 
     await waitFor(() => {
       expect(userService.updateProfile).toHaveBeenCalledWith({ nome: "Carlos Souza" });
-      
+
       expect(window.alert).toHaveBeenCalledWith("Perfil atualizado com sucesso!");
-      
+
       expect(onUserUpdated).toHaveBeenCalledWith({
         name: "Carlos Souza",
         email: "joao@teste.com",
@@ -240,10 +240,13 @@ describe("UserModal", () => {
     fireEvent.click(screen.getByText(/Excluir minha conta/i));
     fireEvent.click(screen.getByText("Confirmar"));
 
-    await waitFor(() => expect(onUserDeleted).toHaveBeenCalledTimes(1));
+    // Correção: O waitFor agora engloba a verificação do botão, esperando o React re-renderizar
+    await waitFor(() => {
+      expect(onUserDeleted).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("Confirmar")).toBeEnabled();
+    });
 
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByText(/Deseja excluir sua conta/i)).toBeInTheDocument();
-    expect(screen.getByText("Confirmar")).toBeEnabled();
   });
 });
