@@ -30,6 +30,11 @@ import {
   updateUserConsents,
   anonymizeAccount,
 } from "../../services/termsService";
+import {
+  acknowledgeLeakIncident,
+  fetchLatestLeakIncident,
+  isLeakIncidentAcknowledged,
+} from "../../services/leakWarningService";
 
 import "./Home.css";
 import { keycloak } from "../../services/keycloak";
@@ -83,6 +88,7 @@ function Home({ documentsRefreshKey = 0 }) {
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isConsentManagerOpen, setIsConsentManagerOpen] = useState(false);
   const [isLeakWarningOpen, setIsLeakWarningOpen] = useState(false);
+  const [leakIncident, setLeakIncident] = useState(null);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const detailRequestId = useRef(0);
@@ -94,6 +100,22 @@ function Home({ documentsRefreshKey = 0 }) {
   const handleClosePdfViewer = useCallback(() => {
     setPdfViewerDocument(null);
   }, []);
+
+  const currentUserId = keycloak?.subject ?? keycloak?.tokenParsed?.sub ?? "";
+
+  const checkLeakWarning = useCallback(async () => {
+    try {
+      const incident = await fetchLatestLeakIncident();
+
+      if (!incident?.id) return;
+      if (isLeakIncidentAcknowledged(incident.id, currentUserId)) return;
+
+      setLeakIncident(incident);
+      setIsLeakWarningOpen(true);
+    } catch (err) {
+      console.error("Erro ao verificar incidentes de vazamento:", err);
+    }
+  }, [currentUserId]);
 
   useEffect(() => {
     async function loadUserAndTerms() {
@@ -118,8 +140,8 @@ function Home({ documentsRefreshKey = 0 }) {
 
         if (hasPendingRequiredTerm) {
           setIsTermsModalOpen(true);
-        } else if (fetchedTerms.length === 0) {
-          setIsLeakWarningOpen(true);
+        } else {
+          await checkLeakWarning();
         }
       } catch (err) {
         console.error("Erro ao carregar perfil ou termos:", err);
@@ -130,7 +152,7 @@ function Home({ documentsRefreshKey = 0 }) {
     loadUserAndTerms().catch((err) => {
       console.error("Erro inesperado:", err);
     });
-  }, []);
+  }, [checkLeakWarning]);
 
   useEffect(() => {
     let cancelled = false;
@@ -408,7 +430,7 @@ function Home({ documentsRefreshKey = 0 }) {
       await acceptTerms(acceptedTermIds);
       setConsents(acceptedTermIds);
       setIsTermsModalOpen(false);
-      setIsLeakWarningOpen(true);
+      await checkLeakWarning();
     } catch (err) {
       console.error("Erro ao aceitar os termos:", err);
     }
@@ -418,6 +440,15 @@ function Home({ documentsRefreshKey = 0 }) {
     await updateUserConsents(acceptedTermIds);
     setConsents(acceptedTermIds);
     setIsConsentManagerOpen(false);
+  }
+
+  function handleCloseLeakWarning() {
+    if (leakIncident?.id) {
+      acknowledgeLeakIncident(leakIncident.id, currentUserId);
+    }
+
+    setLeakIncident(null);
+    setIsLeakWarningOpen(false);
   }
 
   async function handleDeclineTerms() {
@@ -606,9 +637,7 @@ function Home({ documentsRefreshKey = 0 }) {
 
       {/* Modal de Aviso de Vazamento (Aparece após o de Termos) */}
       {isLeakWarningOpen && (
-        <LeakWarning 
-          onClose={() => setIsLeakWarningOpen(false)} 
-        />
+        <LeakWarning onClose={handleCloseLeakWarning} />
       )}
     </div>
   );
