@@ -18,6 +18,9 @@ vi.mock("./components/Layout/Layout", () => ({
       <button type="button" onClick={() => onNavigate("requests")}>
         Ir para solicitações
       </button>
+      <button type="button" onClick={() => onNavigate("users")}>
+        Ir para usuários
+      </button>
       <button type="button" onClick={onDocumentCreated}>
         Documento criado
       </button>
@@ -34,6 +37,10 @@ vi.mock("./pages/Home/Home", () => ({
 
 vi.mock("./pages/AccessRequests/AccessRequests", () => ({
   default: () => <p>Página de solicitações</p>,
+}));
+
+vi.mock("./pages/UserManagement/UserManagement", () => ({
+  default: () => <p>Página de usuários</p>,
 }));
 
 describe("App", () => {
@@ -85,6 +92,28 @@ describe("App", () => {
     expect(screen.getByTestId("layout-state")).toHaveTextContent(
       JSON.stringify({ isOperator: false, activePage: "documents" })
     );
+  });
+
+  it("permite que operadores abram o gerenciamento de usuários", () => {
+    keycloak.tokenParsed = { realm_access: { roles: ["operador"] } };
+
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Ir para usuários" }));
+
+    expect(screen.getByText("Página de usuários")).toBeInTheDocument();
+    expect(screen.getByTestId("layout-state")).toHaveTextContent(
+      JSON.stringify({ isOperator: true, activePage: "users" })
+    );
+  });
+
+  it("impede que não operadores abram o gerenciamento de usuários", () => {
+    keycloak.tokenParsed = { realm_access: { roles: ["usuario"] } };
+
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Ir para usuários" }));
+
+    expect(screen.queryByText("Página de usuários")).not.toBeInTheDocument();
+    expect(screen.getByText("Página de documentos: 0")).toBeInTheDocument();
   });
 
   it("atualiza a chave de documentos quando um documento é criado", () => {
