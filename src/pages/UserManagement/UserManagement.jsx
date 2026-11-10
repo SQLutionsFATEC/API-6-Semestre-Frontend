@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   FiChevronDown,
   FiEdit2,
+  FiLock,
   FiMail,
   FiSettings,
   FiUser,
@@ -14,10 +15,11 @@ const ACCESS_LEVELS = ["Básico", "Comercial", "Militar"];
 
 const MOCK_USERS = Array.from({ length: 20 }, (_, index) => ({
   id: index + 1,
-  name: index === 3 ? "Nome do operador" : "Nome do usuário",
-  email: `usuario${index + 1}@email.com`,
+  name: index === 3 ? "Operador de teste" : "Nome do usuário",
+  email: index === 3 ? "operador.teste@email.com" : `usuario${index + 1}@email.com`,
   sector: "Técnico",
   accessLevel: index === 3 ? "Operador" : "Militar",
+  isOperator: index === 3,
 }));
 
 const emailPattern = /^(?!.*\.\.)[A-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?)+$/i;
@@ -203,6 +205,13 @@ export default function UserManagement() {
   );
 
   function saveUser(updatedUser) {
+    const originalUser = users.find((user) => user.id === updatedUser.id);
+    if (originalUser?.isOperator) {
+      window.alert("Operadores não podem alterar os dados de outros operadores.");
+      setSelectedUser(null);
+      return;
+    }
+
     setUsers((currentUsers) => currentUsers.map((user) => (
       user.id === updatedUser.id ? updatedUser : user
     )));
@@ -210,6 +219,14 @@ export default function UserManagement() {
       `Usuário atualizado com sucesso:\nNome: ${updatedUser.name}\nEmail: ${updatedUser.email}\nSetor: ${updatedUser.sector}\nNível de Acesso: ${updatedUser.accessLevel}`
     );
     setSelectedUser(null);
+  }
+
+  function handleOpenUser(user) {
+    if (user.isOperator) {
+      window.alert("Operadores não podem alterar os dados de outros operadores.");
+      return;
+    }
+    setSelectedUser(user);
   }
 
   return (
@@ -241,8 +258,8 @@ export default function UserManagement() {
             <button
               key={user.id}
               type="button"
-              aria-label={`Editar usuário ${user.name}`}
-              onClick={() => setSelectedUser(user)}
+              aria-label={user.isOperator ? `Usuário operador bloqueado: ${user.name}` : `Editar usuário ${user.name}`}
+              onClick={() => handleOpenUser(user)}
               className="grid min-h-[46px] w-full grid-cols-[24px_minmax(130px,1fr)_minmax(105px,0.55fr)_minmax(75px,0.34fr)_minmax(92px,0.38fr)_30px] items-center gap-3 rounded-[9px] border border-[#dce6f8] bg-white px-3 py-1.5 text-left shadow-[0_2px_6px_rgba(33,73,137,0.14)] transition hover:border-[#9db6e8] hover:shadow-[0_3px_9px_rgba(33,73,137,0.2)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#86164f] max-[800px]:grid-cols-[24px_minmax(0,1fr)_auto] max-[800px]:gap-x-3 max-[800px]:gap-y-2"
             >
               <FiUser size={23} className="text-black" aria-hidden="true" />
@@ -256,8 +273,12 @@ export default function UserManagement() {
               <span className="rounded-full bg-[#fff0f2] px-2.5 py-1 text-center text-[12px] text-[#4c102d] max-[800px]:col-start-2 max-[800px]:w-fit">
                 <span className="hidden pr-1 text-slate-500 max-[800px]:inline">Nível:</span>{user.accessLevel}
               </span>
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#86164f] text-white max-[800px]:col-start-3 max-[800px]:row-span-3 max-[800px]:row-start-1">
-                <FiEdit2 size={14} aria-hidden="true" />
+              <span
+                className={`flex h-6 w-6 items-center justify-center rounded-full text-white max-[800px]:col-start-3 max-[800px]:row-span-3 max-[800px]:row-start-1 ${user.isOperator ? "bg-slate-500" : "bg-[#86164f]"}`}
+                aria-label={user.isOperator ? "Edição bloqueada para operador" : undefined}
+                title={user.isOperator ? "Operador: edição bloqueada" : undefined}
+              >
+                {user.isOperator ? <FiLock size={14} aria-hidden="true" /> : <FiEdit2 size={14} aria-hidden="true" />}
               </span>
             </button>
           ))}

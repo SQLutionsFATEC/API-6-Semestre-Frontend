@@ -10,7 +10,7 @@ describe("UserManagement", () => {
   it("lista usuários com paginação de cinco registros", () => {
     render(<UserManagement />);
 
-    expect(screen.getAllByRole("button", { name: /Editar usuário/ })).toHaveLength(5);
+    expect(screen.getAllByRole("button", { name: /(?:Editar usuário|Usuário operador bloqueado)/ })).toHaveLength(5);
     expect(screen.getByText("Páginas")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Página 2" }));
     expect(screen.getByText("usuario6@email.com")).toBeInTheDocument();
@@ -28,6 +28,23 @@ describe("UserManagement", () => {
     expect(within(screen.getByLabelText("Nível de Acesso")).getAllByRole("option").map((option) => option.textContent)).toEqual([
       "Básico", "Comercial", "Militar",
     ]);
+  });
+
+  it("bloqueia a edição de outro operador e mostra o indicador de cadeado", () => {
+    render(<UserManagement />);
+
+    const operatorCard = screen.getByRole("button", {
+      name: "Usuário operador bloqueado: Operador de teste",
+    });
+    expect(screen.getByText("operador.teste@email.com")).toBeInTheDocument();
+    expect(operatorCard.querySelector("[title='Operador: edição bloqueada']")).toBeInTheDocument();
+
+    fireEvent.click(operatorCard);
+
+    expect(window.alert).toHaveBeenCalledWith(
+      "Operadores não podem alterar os dados de outros operadores."
+    );
+    expect(screen.queryByRole("heading", { name: "Editar Usuário" })).not.toBeInTheDocument();
   });
 
   it("valida o email e alerta o erro sem salvar", () => {
