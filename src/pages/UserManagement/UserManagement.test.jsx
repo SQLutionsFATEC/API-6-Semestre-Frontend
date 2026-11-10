@@ -43,6 +43,36 @@ describe("UserManagement", () => {
     expect(screen.getByRole("heading", { name: "Editar Usuário" })).toBeInTheDocument();
   });
 
+  it("rejeita formatos de email malformados, mesmo com arroba e domínio", () => {
+    render(<UserManagement />);
+    fireEvent.click(screen.getAllByRole("button", { name: /Editar usuário/ })[0]);
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "ana..souza@exemplo.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /Salvar alterações/ }));
+
+    expect(screen.getByText("Informe um endereço de email válido.")).toBeInTheDocument();
+    expect(window.alert).toHaveBeenCalledWith(
+      "Erro de validação: Informe um endereço de email válido."
+    );
+  });
+
+  it("valida que todos os campos são preenchidos antes de salvar", () => {
+    render(<UserManagement />);
+    fireEvent.click(screen.getAllByRole("button", { name: /Editar usuário/ })[0]);
+    fireEvent.change(screen.getByLabelText("Nome"), { target: { value: "   " } });
+    fireEvent.change(screen.getByLabelText("Email"), { target: { value: "   " } });
+    fireEvent.change(screen.getByLabelText("Setor"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("Nível de Acesso"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: /Salvar alterações/ }));
+
+    expect(screen.getByText("Informe o nome do usuário.")).toBeInTheDocument();
+    expect(screen.getByText("Informe o email do usuário.")).toBeInTheDocument();
+    expect(screen.getByText("Selecione um setor.")).toBeInTheDocument();
+    expect(screen.getByText("Selecione um nível de acesso.")).toBeInTheDocument();
+    expect(window.alert).toHaveBeenCalledWith(
+      "Erro de validação: Informe o nome do usuário. Informe o email do usuário. Selecione um setor. Selecione um nível de acesso."
+    );
+  });
+
   it("salva mock validado, exibe os novos dados e atualiza o cartão", () => {
     render(<UserManagement />);
     fireEvent.click(screen.getAllByRole("button", { name: /Editar usuário/ })[0]);

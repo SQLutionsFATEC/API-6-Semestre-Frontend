@@ -20,7 +20,7 @@ const MOCK_USERS = Array.from({ length: 20 }, (_, index) => ({
   accessLevel: index === 3 ? "Operador" : "Militar",
 }));
 
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const emailPattern = /^(?!.*\.\.)[A-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?)+$/i;
 
 function validateUser(user) {
   const errors = {};
@@ -30,8 +30,14 @@ function validateUser(user) {
   } else if (!emailPattern.test(user.email.trim())) {
     errors.email = "Informe um endereço de email válido.";
   }
-  if (!SECTORS.includes(user.sector)) errors.sector = "Selecione um setor válido.";
-  if (!ACCESS_LEVELS.includes(user.accessLevel)) {
+  if (!user.sector.trim()) {
+    errors.sector = "Selecione um setor.";
+  } else if (!SECTORS.includes(user.sector)) {
+    errors.sector = "Selecione um setor válido.";
+  }
+  if (!user.accessLevel.trim()) {
+    errors.accessLevel = "Selecione um nível de acesso.";
+  } else if (!ACCESS_LEVELS.includes(user.accessLevel)) {
     errors.accessLevel = "Selecione um nível de acesso válido.";
   }
   return errors;
@@ -95,6 +101,7 @@ function UserEditModal({ user, onClose, onSave }) {
         <input
           id="user-name"
           name="name"
+          required
           value={form.name}
           onChange={updateField}
           placeholder="Nome"
@@ -112,6 +119,7 @@ function UserEditModal({ user, onClose, onSave }) {
             id="user-email"
             name="email"
             type="email"
+            required
             value={form.email}
             onChange={updateField}
             className={fieldClass(Boolean(errors.email))}
@@ -130,6 +138,7 @@ function UserEditModal({ user, onClose, onSave }) {
               <select
                 id="user-sector"
                 name="sector"
+                required
                 value={form.sector}
                 onChange={updateField}
                 className={`${fieldClass(Boolean(errors.sector))} appearance-none pr-9 text-lg text-[#063476]`}
@@ -149,6 +158,7 @@ function UserEditModal({ user, onClose, onSave }) {
               <select
                 id="user-access-level"
                 name="accessLevel"
+                required
                 value={form.accessLevel}
                 onChange={updateField}
                 className={`${fieldClass(Boolean(errors.accessLevel))} appearance-none pr-9 text-lg text-[#063476]`}
