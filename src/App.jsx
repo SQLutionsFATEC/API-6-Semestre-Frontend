@@ -3,6 +3,7 @@ import Layout from "./components/Layout/Layout";
 import Home from "./pages/Home/Home";
 import AccessRequests from "./pages/AccessRequests/AccessRequests";
 import Chat from "./pages/Chat/Chat";
+import UserManagement from "./pages/UserManagement/UserManagement";
 import { keycloak } from "./services/keycloak";
 
 import "./App.css";
@@ -23,7 +24,9 @@ function App() {
   );
 
   const currentPage =
-    activePage === "requests" && isOperator ? (
+    activePage === "users" && isOperator ? (
+      <UserManagement />
+    ) : activePage === "requests" && isOperator ? (
       <AccessRequests />
     ) : activePage === "chat" ? (
       <Chat />
@@ -36,7 +39,9 @@ function App() {
       isOperator={isOperator}
       activePage={activePage}
       onNavigate={(page) => {
-        if (page !== "requests" || isOperator) setActivePage(page);
+        if (!["requests", "users"].includes(page) || isOperator) {
+          setActivePage(page);
+        }
       }}
       onDocumentCreated={() => setDocumentsRefreshKey((key) => key + 1)}
     >

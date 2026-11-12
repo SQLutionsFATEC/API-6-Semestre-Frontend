@@ -32,6 +32,17 @@ describe("Sidebar", () => {
     expect(screen.getByRole("button", { name: "Solicitações" })).toBeInTheDocument();
   });
 
+  it("mostra Usuários apenas para operadores e navega ao clicar", () => {
+    const onNavigate = vi.fn();
+    const { rerender } = render(<Sidebar isOperator={false} onNavigate={onNavigate} />);
+
+    expect(screen.queryByRole("button", { name: "Usuários" })).not.toBeInTheDocument();
+
+    rerender(<Sidebar isOperator onNavigate={onNavigate} />);
+    fireEvent.click(screen.getByRole("button", { name: "Usuários" }));
+    expect(onNavigate).toHaveBeenCalledWith("users");
+  });
+
   it("renderiza o botão 'Cadastrar documento' acima do botão 'Deslogar' para operadores", () => {
     render(<Sidebar isOperator />);
     const uploadBtn = screen.getByRole("button", { name: /Cadastrar documento/i });
