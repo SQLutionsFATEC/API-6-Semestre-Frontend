@@ -5,6 +5,7 @@ import {
   FiUploadCloud,
   FiChevronRight,
   FiClipboard,
+  FiUsers,
 } from "react-icons/fi";
 import { keycloak } from "../../services/keycloak";
 import logo from "../../assets/logo.svg";
@@ -60,6 +61,17 @@ function Sidebar({
             >
               <FiClipboard size={18} />
               Solicitações
+            </button>
+          )}
+          {isOperator && (
+            <button
+              type="button"
+              className={`sidebar-item${activePage === "users" ? " active" : ""}`}
+              aria-current={activePage === "users" ? "page" : undefined}
+              onClick={() => onNavigate?.("users")}
+            >
+              <FiUsers size={18} />
+              Usuários
             </button>
           )}
         </nav>
