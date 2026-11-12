@@ -8,6 +8,7 @@ import {
   FiUser,
   FiUsers,
 } from "react-icons/fi";
+import Pagination from "../../components/Pagination/Pagination";
 
 const PAGE_SIZE = 5;
 const SECTORS = ["Técnico", "Normativo", "Jurídico", "Qualitativo"];
@@ -285,32 +286,13 @@ export default function UserManagement() {
         </div>
       </section>
 
-      <nav
-        className="mt-auto flex flex-col items-center gap-1.5 pt-16 max-[560px]:pt-8"
-        aria-label="Paginação de usuários"
-      >
-        <span className="text-[10px] text-[#8c6a78]">Páginas</span>
-        <div className="flex items-center gap-2">
-          {Array.from({ length: totalPages }, (_, index) => {
-            const page = index + 1;
-            return (
-              <button
-                key={page}
-                type="button"
-                aria-current={currentPage === page ? "page" : undefined}
-                aria-label={`Página ${page}`}
-                onClick={() => setCurrentPage(page)}
-                className={`flex h-[18px] min-w-[18px] items-center justify-center rounded-[2px] border px-1 text-[10px] transition ${
-                  currentPage === page
-                    ? "border-[#7a1452] bg-[#7a1452] text-white"
-                    : "border-[#d7c5ce] bg-white text-[#4c102d] hover:bg-[#fff1f5]"
-                }`}
-              >
-                {page}
-              </button>
-            );
-          })}
-        </div>
+      <nav className="mt-auto" aria-label="Paginação de usuários">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          className="!mb-3 !mt-0 pt-16 max-[560px]:pt-8"
+        />
       </nav>
 
       {selectedUser && (

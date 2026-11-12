@@ -12,7 +12,7 @@ describe("UserManagement", () => {
 
     expect(screen.getAllByRole("button", { name: /(?:Editar usuário|Usuário operador bloqueado)/ })).toHaveLength(5);
     expect(screen.getByText("Páginas")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Página 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "2" }));
     expect(screen.getByText("usuario6@email.com")).toBeInTheDocument();
     expect(screen.queryByText("usuario1@email.com")).not.toBeInTheDocument();
   });
