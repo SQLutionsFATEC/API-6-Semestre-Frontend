@@ -25,6 +25,14 @@ describe("Chat", () => {
     expect(
       screen.getByRole("heading", { name: "Como posso te ajudar?" })
     ).toBeInTheDocument();
+    const conversation = screen.getByRole("region", {
+      name: "Conversa com o assistente",
+    });
+    const queryPanel = screen.getByRole("region", {
+      name: "Pergunte aos documentos",
+    });
+    expect(conversation).toHaveClass("min-h-0", "overflow-y-auto");
+    expect(conversation.nextElementSibling).toBe(queryPanel);
     expect(screen.getAllByRole("button").filter((button) =>
       button.classList.contains("chat-suggestion")
     )).toHaveLength(4);

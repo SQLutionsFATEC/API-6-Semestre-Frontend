@@ -174,41 +174,13 @@ export default function Chat() {
   }
 
   return (
-    <main className="chat-page flex min-h-[calc(100vh-64px)] w-full max-w-[1120px] flex-col mx-auto text-[#26344a] max-[640px]:min-h-[calc(100vh-48px)]">
+    <main className="chat-page mx-auto flex h-[calc(100vh-64px)] min-h-0 w-full max-w-[1120px] flex-col text-[#26344a] max-[900px]:h-[calc(100vh-44px)]">
       <header className="chat-page-header mb-[17px] flex items-center gap-3">
         <FiZap className="chat-page-header-icon text-[#83002f]" size={23} aria-hidden="true" />
         <h1 className="m-0 text-[clamp(24px,3vw,30px)] font-extrabold tracking-[-0.035em] text-[#71002a]">Chat</h1>
       </header>
 
-      <section className="chat-query-panel rounded-2xl border border-[#e7edf5] bg-white/90 p-[17px] shadow-[0_7px_22px_rgb(36_57_88_/_5%)] max-[640px]:p-3" aria-label="Pergunte aos documentos">
-        <form className="chat-query-form flex min-h-[46px] items-center gap-[9px] rounded-[11px] border border-[#dce5f1] bg-white py-1 px-[5px] pl-[13px] transition-[border-color,box-shadow] duration-150 focus-within:border-[#95b5ff] focus-within:shadow-[0_0_0_3px_rgb(37_99_235_/_9%)]" onSubmit={handleSubmit}>
-          <FiSearch className="chat-query-icon shrink-0 text-[#8da0ba]" size={17} aria-hidden="true" />
-          <input
-            className="h-9 min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#26364f] outline-none placeholder:text-[#8998ad]"
-            aria-label="Sua pergunta"
-            autoComplete="off"
-            disabled={loading}
-            onChange={(event) => setQuestion(event.target.value)}
-            placeholder="Pergunte sobre normas, procedimentos ou relatórios..."
-            value={question}
-          />
-          <button
-            className="chat-submit-button grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border-0 bg-[#2867f5] text-white shadow-[0_3px_8px_rgb(37_99_235_/_20%)] transition-[background,transform] duration-150 hover:-translate-y-px hover:bg-[#1452df] disabled:cursor-not-allowed disabled:opacity-55"
-            type="submit"
-            disabled={!question.trim() || loading}
-            aria-label="Enviar pergunta"
-            title="Enviar pergunta"
-          >
-            <FiZap size={17} aria-hidden="true" />
-          </button>
-        </form>
-        <p className="chat-privacy-note mt-[10px] flex items-center gap-[6px] text-[10px] leading-[1.5] text-[#8290a5] max-[640px]:items-start">
-          <FiLock className="shrink-0 text-[#7e94b4]" size={12} aria-hidden="true" />
-          A IA busca apenas nos documentos aos quais o seu perfil tem acesso.
-        </p>
-      </section>
-
-      <section className="chat-conversation w-full flex-1 px-0 pt-7 pb-3 max-[640px]:pt-5" aria-label="Conversa com o assistente">
+      <section className="chat-conversation min-h-0 w-full flex-1 overflow-y-auto overscroll-contain px-0 pt-7 pb-3 max-[640px]:pt-5" aria-label="Conversa com o assistente">
         {messages.length === 0 ? (
           <div className="chat-empty-state flex min-h-[clamp(300px,53vh,500px)] flex-col items-center justify-center px-[10px] pt-5 pb-[34px] text-center">
             <div className="chat-empty-icon mb-[15px] grid h-[70px] w-[70px] place-items-center rounded-[22px] border border-[#e5edfc] bg-[linear-gradient(145deg,#f4f8ff,#eaf2ff)] text-[#2867f5] shadow-[0_10px_24px_rgb(37_99_235_/_7%)]" aria-hidden="true">
@@ -247,6 +219,34 @@ export default function Chat() {
             <div ref={conversationEndRef} />
           </div>
         )}
+      </section>
+
+      <section className="chat-query-panel shrink-0 rounded-2xl border border-[#e7edf5] bg-white/90 p-[17px] shadow-[0_7px_22px_rgb(36_57_88_/_5%)] max-[640px]:p-3" aria-label="Pergunte aos documentos">
+        <form className="chat-query-form flex min-h-[46px] items-center gap-[9px] rounded-[11px] border border-[#dce5f1] bg-white py-1 px-[5px] pl-[13px] transition-[border-color,box-shadow] duration-150 focus-within:border-[#95b5ff] focus-within:shadow-[0_0_0_3px_rgb(37_99_235_/_9%)]" onSubmit={handleSubmit}>
+          <FiSearch className="chat-query-icon shrink-0 text-[#8da0ba]" size={17} aria-hidden="true" />
+          <input
+            className="h-9 min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#26364f] outline-none placeholder:text-[#8998ad]"
+            aria-label="Sua pergunta"
+            autoComplete="off"
+            disabled={loading}
+            onChange={(event) => setQuestion(event.target.value)}
+            placeholder="Pergunte sobre normas, procedimentos ou relatórios..."
+            value={question}
+          />
+          <button
+            className="chat-submit-button grid h-9 w-9 shrink-0 place-items-center rounded-[9px] border-0 bg-[#2867f5] text-white shadow-[0_3px_8px_rgb(37_99_235_/_20%)] transition-[background,transform] duration-150 hover:-translate-y-px hover:bg-[#1452df] disabled:cursor-not-allowed disabled:opacity-55"
+            type="submit"
+            disabled={!question.trim() || loading}
+            aria-label="Enviar pergunta"
+            title="Enviar pergunta"
+          >
+            <FiZap size={17} aria-hidden="true" />
+          </button>
+        </form>
+        <p className="chat-privacy-note mt-[10px] flex items-center gap-[6px] text-[10px] leading-[1.5] text-[#8290a5] max-[640px]:items-start">
+          <FiLock className="shrink-0 text-[#7e94b4]" size={12} aria-hidden="true" />
+          A IA busca apenas nos documentos aos quais o seu perfil tem acesso.
+        </p>
       </section>
 
       {selectedDocument && (
