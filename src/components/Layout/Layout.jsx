@@ -18,7 +18,11 @@ function Layout({
         onNavigate={onNavigate}
       />
 
-      <main className="layout-content">
+      <main
+        className={`layout-content ${
+          activePage === "chat" ? "h-screen min-h-0 overflow-hidden" : ""
+        }`}
+      >
         {children}
       </main>
     </div>
