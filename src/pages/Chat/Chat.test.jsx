@@ -69,6 +69,28 @@ describe("Chat", () => {
     expect(screen.getByText(/Requisitos para fadiga/)).toBeInTheDocument();
   });
 
+  it("mantém o foco no campo durante e após o envio com Enter", async () => {
+    let resolveResponse;
+    vi.mocked(sendChatMessage).mockReturnValue(
+      new Promise((resolve) => {
+        resolveResponse = resolve;
+      })
+    );
+
+    render(<Chat />);
+    const input = screen.getByRole("textbox", { name: "Sua pergunta" });
+    fireEvent.change(input, { target: { value: "Pergunta de teste" } });
+    input.focus();
+    fireEvent.submit(input.closest("form"));
+
+    expect(input).not.toBeDisabled();
+    expect(input).toHaveFocus();
+
+    resolveResponse({ resposta: "Resposta após consulta.", fontes: [] });
+    expect(await screen.findByText("Resposta após consulta.")).toBeInTheDocument();
+    expect(input).toHaveFocus();
+  });
+
   it("abre o modal de detalhes ao selecionar um documento citado", async () => {
     vi.mocked(sendChatMessage).mockResolvedValue({
       resposta: "Veja o documento relacionado.",

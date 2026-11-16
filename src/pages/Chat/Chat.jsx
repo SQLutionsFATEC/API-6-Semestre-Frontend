@@ -228,7 +228,6 @@ export default function Chat() {
             className="h-9 min-w-0 flex-1 border-0 bg-transparent text-[13px] text-[#26364f] outline-none placeholder:text-[#8998ad]"
             aria-label="Sua pergunta"
             autoComplete="off"
-            disabled={loading}
             onChange={(event) => setQuestion(event.target.value)}
             placeholder="Pergunte sobre normas, procedimentos ou relatórios..."
             value={question}
