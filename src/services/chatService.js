@@ -1,10 +1,16 @@
-import api from "./api";
-
 /**
- * Sends a question to the authenticated semantic-search endpoint.
- * The shared API client attaches the current user's JWT to this request.
+ * Temporary mock while the chat endpoint is unavailable.
+ * Keep this signature so the API call can replace the mock when the endpoint exists.
  */
-export async function sendChatMessage(question) {
-  const response = await api.post("/api/chat/", { pergunta: question });
-  return response.data;
+export function sendChatMessage(question) {
+  void question;
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        resposta:
+          "Encontrei alguns documentos relacionados a sua pesquisa, seriam: FAR-271.75 e MLT-HDBK-3927. Encontrou o que precisava? Ou os não são estes documentos?",
+        fontes: [],
+      });
+    }, 5000);
+  });
 }

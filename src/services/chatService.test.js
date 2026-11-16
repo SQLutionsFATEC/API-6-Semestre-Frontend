@@ -1,22 +1,28 @@
-import { describe, expect, it, vi } from "vitest";
-
-import api from "./api";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { sendChatMessage } from "./chatService";
 
-vi.mock("./api", () => ({
-  default: { post: vi.fn() },
-}));
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("sendChatMessage", () => {
-  it("envia a pergunta ao endpoint autenticado e retorna a resposta", async () => {
-    const payload = { resposta: "Resposta baseada nos documentos.", fontes: [] };
-    vi.mocked(api.post).mockResolvedValue({ data: payload });
+  it("retorna a resposta template após cinco segundos", async () => {
+    vi.useFakeTimers();
+    const request = sendChatMessage("Onde está o procedimento?");
 
-    await expect(sendChatMessage("Onde está o procedimento?")).resolves.toEqual(
-      payload
-    );
-    expect(api.post).toHaveBeenCalledWith("/api/chat/", {
-      pergunta: "Onde está o procedimento?",
+    let resolved = false;
+    request.then(() => {
+      resolved = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(4999);
+    expect(resolved).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(request).resolves.toEqual({
+      resposta:
+        "Encontrei alguns documentos relacionados a sua pesquisa, seriam: FAR-271.75 e MLT-HDBK-3927. Encontrou o que precisava? Ou os não são estes documentos?",
+      fontes: [],
     });
   });
 });
