@@ -2,6 +2,7 @@ import { useState } from "react";
 import Layout from "./components/Layout/Layout";
 import Home from "./pages/Home/Home";
 import AccessRequests from "./pages/AccessRequests/AccessRequests";
+import Chat from "./pages/Chat/Chat";
 import UserManagement from "./pages/UserManagement/UserManagement";
 import { keycloak } from "./services/keycloak";
 
@@ -27,6 +28,8 @@ function App() {
       <UserManagement />
     ) : activePage === "requests" && isOperator ? (
       <AccessRequests />
+    ) : activePage === "chat" ? (
+      <Chat />
     ) : (
       <Home documentsRefreshKey={documentsRefreshKey} />
     );
