@@ -1,81 +1,174 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import AccessRequests from "./AccessRequests";
+import {
+  fetchAccessRequests,
+  resolveAccessRequestDetails,
+} from "../../services/accessRequestService";
+
+vi.mock("../../services/accessRequestService", () => ({
+  fetchAccessRequests: vi.fn(),
+  resolveAccessRequestDetails: vi.fn(),
+}));
+
+const PAGE_ONE = [
+  {
+    id: 1,
+    documento_id: 3,
+    usuario_id: "usuario-1",
+    data_solicitacao: "2026-09-09T10:00:00Z",
+    approved: false,
+    documentoNome: "FAR Part 25.571: Avaliação de Tolerância ao Dano",
+    solicitanteNome: "Maria Silva",
+  },
+  {
+    id: 2,
+    documento_id: 4,
+    usuario_id: "usuario-2",
+    data_solicitacao: "2026-09-10T10:00:00Z",
+    approved: false,
+    documentoNome: "Manual de procedimentos técnicos",
+    solicitanteNome: "João Souza",
+  },
+];
+
+function mockPage(results, count = results.length) {
+  fetchAccessRequests.mockResolvedValue({ count, results });
+  resolveAccessRequestDetails.mockImplementation(async (solicitacoes) =>
+    solicitacoes
+  );
+}
 
 describe("AccessRequests", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockPage([], 0);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("renderiza o título, a seção e os dados de cinco solicitações", () => {
+  it("carrega a primeira página de solicitações da API", async () => {
+    mockPage(PAGE_ONE);
+
     render(<AccessRequests />);
 
     expect(screen.getByRole("heading", { name: "Solicitações" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Solicitações de acesso" })).toBeInTheDocument();
-    const requests = screen.getAllByRole("article");
-    expect(requests).toHaveLength(5);
-    expect(within(requests[0]).getByText("FAR Part 25.571: Avaliação de Tolerância ao Dano e Fadiga da Estrutura")).toBeInTheDocument();
-    expect(within(requests[0]).getByText("Nome do usuário")).toBeInTheDocument();
+    expect(
+      screen.getByRole("region", { name: "Solicitações de acesso" })
+    ).toBeInTheDocument();
+
+    const requests = await screen.findAllByRole("article");
+    expect(requests).toHaveLength(2);
+    expect(
+      within(requests[0]).getByText("FAR Part 25.571: Avaliação de Tolerância ao Dano")
+    ).toBeInTheDocument();
+    expect(within(requests[0]).getByText("Maria Silva")).toBeInTheDocument();
     expect(within(requests[0]).getByText("09/09/2026")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /Aprovar solicitação/ })).toHaveLength(5);
-    expect(screen.getAllByRole("button", { name: /Recusar solicitação/ })).toHaveLength(5);
+
+    expect(fetchAccessRequests).toHaveBeenCalledWith({ page: 1 });
+    expect(resolveAccessRequestDetails).toHaveBeenCalledWith(PAGE_ONE);
+    expect(
+      screen.getByRole("button", {
+        name: "Aprovar solicitação de Maria Silva para FAR Part 25.571: Avaliação de Tolerância ao Dano",
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: "Recusar solicitação de João Souza para Manual de procedimentos técnicos",
+      })
+    ).toBeInTheDocument();
   });
 
-  it("mostra quatro páginas e permite navegar com os controles anterior e próxima", () => {
+  it("exibe o estado de carregamento e esconde a lista", async () => {
+    fetchAccessRequests.mockReturnValue(new Promise(() => {}));
+
     render(<AccessRequests />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Carregando solicitações..."
+    );
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+  });
+
+  it("exibe mensagem de erro quando a busca falha", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    fetchAccessRequests.mockRejectedValue(new Error("falha"));
+
+    render(<AccessRequests />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível carregar as solicitações de acesso."
+    );
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Erro ao buscar solicitações de acesso:",
+      expect.any(Error)
+    );
+  });
+
+  it("informa quando não há solicitações de acesso", async () => {
+    mockPage([], 0);
+
+    render(<AccessRequests />);
+
+    expect(
+      await screen.findByText("Nenhuma solicitação de acesso encontrada.")
+    ).toBeInTheDocument();
+  });
+
+  it("pagina as solicitações conforme a contagem da API", async () => {
+    mockPage(PAGE_ONE, 12);
+
+    render(<AccessRequests />);
+
+    await screen.findAllByRole("article");
 
     const previousPage = screen.getByRole("button", { name: "Página anterior" });
     const nextPage = screen.getByRole("button", { name: "Próxima página" });
 
     expect(screen.getByRole("button", { name: "1" })).toHaveClass("active");
-    expect(screen.getByRole("button", { name: "4" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "3" })).not.toBeInTheDocument();
     expect(previousPage).toBeDisabled();
-    expect(nextPage).toBeEnabled();
+
+    mockPage([
+      {
+        id: 3,
+        documento_id: 5,
+        usuario_id: "usuario-3",
+        data_solicitacao: "2026-09-11T10:00:00Z",
+        approved: false,
+        documentoNome: "Relatório de análise de segurança",
+        solicitanteNome: "Ana Lima",
+      },
+    ], 12);
 
     fireEvent.click(nextPage);
+
+    await waitFor(() => {
+      expect(fetchAccessRequests).toHaveBeenCalledWith({ page: 2 });
+    });
+
+    expect(await screen.findByText("Relatório de análise de segurança")).toBeInTheDocument();
+    expect(screen.getAllByRole("article")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "2" })).toHaveClass("active");
-    expect(previousPage).toBeEnabled();
-    expect(screen.getAllByRole("article")).toHaveLength(5);
-
-    fireEvent.click(nextPage);
-    fireEvent.click(nextPage);
-    expect(screen.getByRole("button", { name: "4" })).toHaveClass("active");
     expect(nextPage).toBeDisabled();
-
-    fireEvent.click(previousPage);
-    expect(screen.getByRole("button", { name: "3" })).toHaveClass("active");
-    expect(nextPage).toBeEnabled();
   });
 
-  it("permite selecionar diretamente uma página", () => {
+  it("permite selecionar diretamente uma página", async () => {
+    mockPage(PAGE_ONE, 12);
+
     render(<AccessRequests />);
 
-    fireEvent.click(screen.getByRole("button", { name: "3" }));
+    await screen.findAllByRole("article");
 
-    expect(screen.getByRole("button", { name: "3" })).toHaveClass("active");
-    expect(screen.getAllByRole("article")).toHaveLength(5);
-  });
+    fireEvent.click(screen.getByRole("button", { name: "2" }));
 
-  it("exibe feedback mockado ao aprovar uma solicitação", () => {
-    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
-    render(<AccessRequests />);
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "Aprovar solicitação de Nome do usuário para FAR Part 25.571: Avaliação de Tolerância ao Dano e Fadiga da Estrutura",
-      })
-    );
-    expect(alert).toHaveBeenCalledWith("Ação de aprovação em desenvolvimento.");
-  });
-
-  it("exibe feedback mockado ao recusar uma solicitação", () => {
-    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
-    render(<AccessRequests />);
-
-    fireEvent.click(
-      screen.getAllByRole("button", { name: /Recusar solicitação/ })[0]
-    );
-
-    expect(alert).toHaveBeenCalledWith("Ação de recusa em desenvolvimento.");
+    await waitFor(() => {
+      expect(fetchAccessRequests).toHaveBeenCalledWith({ page: 2 });
+    });
   });
 });
