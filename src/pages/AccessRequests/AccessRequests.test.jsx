@@ -5,11 +5,13 @@ import AccessRequests from "./AccessRequests";
 import {
   fetchAccessRequests,
   resolveAccessRequestDetails,
+  updateAccessRequest,
 } from "../../services/accessRequestService";
 
 vi.mock("../../services/accessRequestService", () => ({
   fetchAccessRequests: vi.fn(),
   resolveAccessRequestDetails: vi.fn(),
+  updateAccessRequest: vi.fn(),
 }));
 
 const PAGE_ONE = [
@@ -44,6 +46,7 @@ describe("AccessRequests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockPage([], 0);
+    updateAccessRequest.mockResolvedValue({ id: 1, approved: true });
   });
 
   afterEach(() => {
@@ -169,6 +172,139 @@ describe("AccessRequests", () => {
 
     await waitFor(() => {
       expect(fetchAccessRequests).toHaveBeenCalledWith({ page: 2 });
+    });
+  });
+
+  it("aprova a solicitação e alerta o sucesso da ação", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    mockPage(PAGE_ONE);
+
+    render(<AccessRequests />);
+
+    await screen.findAllByRole("article");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Aprovar solicitação de Maria Silva para FAR Part 25.571: Avaliação de Tolerância ao Dano",
+      })
+    );
+
+    await waitFor(() => {
+      expect(updateAccessRequest).toHaveBeenCalledWith(1, true);
+      expect(alert).toHaveBeenCalledWith(
+        "Solicitação de acesso aprovada com sucesso."
+      );
+    });
+
+    await waitFor(() => {
+      expect(fetchAccessRequests).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("recusa a solicitação e alerta o sucesso da ação", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    mockPage(PAGE_ONE);
+
+    render(<AccessRequests />);
+
+    await screen.findAllByRole("article");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Recusar solicitação de João Souza para Manual de procedimentos técnicos",
+      })
+    );
+
+    await waitFor(() => {
+      expect(updateAccessRequest).toHaveBeenCalledWith(2, false);
+      expect(alert).toHaveBeenCalledWith(
+        "Solicitação de acesso recusada com sucesso."
+      );
+    });
+  });
+
+  it("alerta a falha ao aprovar a solicitação", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    updateAccessRequest.mockRejectedValue(new Error("falha"));
+    mockPage(PAGE_ONE);
+
+    render(<AccessRequests />);
+
+    await screen.findAllByRole("article");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Aprovar solicitação de Maria Silva para FAR Part 25.571: Avaliação de Tolerância ao Dano",
+      })
+    );
+
+    await waitFor(() => {
+      expect(alert).toHaveBeenCalledWith(
+        "Não foi possível concluir a aprovação da solicitação de acesso. Tente novamente."
+      );
+    });
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Erro ao registrar a aprovação da solicitação de acesso:",
+      expect.any(Error)
+    );
+    expect(fetchAccessRequests).toHaveBeenCalledTimes(1);
+  });
+
+  it("alerta a falha ao recusar a solicitação", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    updateAccessRequest.mockRejectedValue(new Error("falha"));
+    mockPage(PAGE_ONE);
+
+    render(<AccessRequests />);
+
+    await screen.findAllByRole("article");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Recusar solicitação de João Souza para Manual de procedimentos técnicos",
+      })
+    );
+
+    await waitFor(() => {
+      expect(alert).toHaveBeenCalledWith(
+        "Não foi possível concluir a recusa da solicitação de acesso. Tente novamente."
+      );
+    });
+  });
+
+  it("desabilita as ações enquanto uma solicitação é atualizada", async () => {
+    let resolveUpdate;
+    updateAccessRequest.mockReturnValue(
+      new Promise((resolve) => {
+        resolveUpdate = resolve;
+      })
+    );
+    mockPage(PAGE_ONE);
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+
+    render(<AccessRequests />);
+
+    await screen.findAllByRole("article");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Aprovar solicitação de Maria Silva/ })
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /Recusar solicitação de João Souza/ })
+      ).toBeDisabled();
+    });
+
+    resolveUpdate({ id: 1, approved: true });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /Recusar solicitação de João Souza/ })
+      ).toBeEnabled();
     });
   });
 });

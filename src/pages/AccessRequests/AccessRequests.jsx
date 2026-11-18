@@ -13,6 +13,7 @@ import Pagination from "../../components/Pagination/Pagination";
 import {
   fetchAccessRequests,
   resolveAccessRequestDetails,
+  updateAccessRequest,
 } from "../../services/accessRequestService";
 
 // O endpoint /api/solicitacoes-acesso/ pagina de 10 em 10.
@@ -40,6 +41,8 @@ export default function AccessRequests() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [updatingRequestId, setUpdatingRequestId] = useState(null);
 
   const totalPages = Math.max(
     1,
@@ -82,10 +85,37 @@ export default function AccessRequests() {
     return () => {
       cancelled = true;
     };
-  }, [currentPage]);
+  }, [currentPage, refreshKey]);
 
-  function showMockAction(action) {
-    window.alert(`Ação de ${action} em desenvolvimento.`);
+  async function handleReview(request, approved) {
+    if (updatingRequestId !== null) {
+      return;
+    }
+
+    setUpdatingRequestId(request.id);
+
+    try {
+      await updateAccessRequest(request.id, approved);
+
+      window.alert(
+        approved
+          ? "Solicitação de acesso aprovada com sucesso."
+          : "Solicitação de acesso recusada com sucesso."
+      );
+
+      setRefreshKey((currentKey) => currentKey + 1);
+    } catch (err) {
+      console.error(
+        `Erro ao registrar a ${approved ? "aprovação" : "recusa"} da solicitação de acesso:`,
+        err
+      );
+
+      window.alert(
+        `Não foi possível concluir a ${approved ? "aprovação" : "recusa"} da solicitação de acesso. Tente novamente.`
+      );
+    } finally {
+      setUpdatingRequestId(null);
+    }
   }
 
   return (
@@ -166,17 +196,19 @@ export default function AccessRequests() {
                 <div className="flex items-center justify-end gap-[7px] max-[800px]:col-start-3 max-[800px]:row-span-3 max-[800px]:row-start-1">
                   <button
                     type="button"
-                    className="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[2px] border border-[#7a1452] bg-[#7a1452] p-0 text-white hover:brightness-90"
+                    className="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[2px] border border-[#7a1452] bg-[#7a1452] p-0 text-white hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-60"
                     aria-label={`Aprovar solicitação de ${request.solicitanteNome} para ${request.documentoNome}`}
-                    onClick={() => showMockAction("aprovação")}
+                    onClick={() => handleReview(request, true)}
+                    disabled={updatingRequestId !== null}
                   >
                     <FiCheck size={17} aria-hidden="true" />
                   </button>
                   <button
                     type="button"
-                    className="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[2px] border border-[#bfc2c7] bg-white p-0 text-[#222] hover:brightness-90"
+                    className="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[2px] border border-[#bfc2c7] bg-white p-0 text-[#222] hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-60"
                     aria-label={`Recusar solicitação de ${request.solicitanteNome} para ${request.documentoNome}`}
-                    onClick={() => showMockAction("recusa")}
+                    onClick={() => handleReview(request, false)}
+                    disabled={updatingRequestId !== null}
                   >
                     <FiX size={17} aria-hidden="true" />
                   </button>
