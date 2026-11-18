@@ -19,6 +19,7 @@ import {
   fetchLatestLeakIncident,
   isLeakIncidentAcknowledged,
 } from "../../services/leakWarningService";
+import { requestDocumentAccess } from "../../services/accessRequestService";
 
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
@@ -51,6 +52,10 @@ vi.mock("../../services/leakWarningService", () => ({
   fetchLatestLeakIncident: vi.fn(),
   isLeakIncidentAcknowledged: vi.fn(),
   acknowledgeLeakIncident: vi.fn(),
+}));
+
+vi.mock("../../services/accessRequestService", () => ({
+  requestDocumentAccess: vi.fn(),
 }));
 
 vi.mock("pdfjs-dist", () => ({
@@ -147,6 +152,7 @@ beforeEach(() => {
   vi.mocked(fetchUserConsents).mockResolvedValue([]);
   vi.mocked(fetchLatestLeakIncident).mockResolvedValue(null);
   vi.mocked(isLeakIncidentAcknowledged).mockReturnValue(false);
+  vi.mocked(requestDocumentAccess).mockResolvedValue({ created: true });
 });
 
 afterEach(() => {
@@ -640,13 +646,76 @@ describe("Home", () => {
     expect(getModal().querySelector("footer .modal-view-button")).toBeNull();
     fireEvent.click(getModal().querySelector("footer button"));
 
-    expect(alert).toHaveBeenCalledWith(
-      "Funcionalidade de solicitação de acesso em desenvolvimento."
-    );
+    await waitFor(() => {
+      expect(requestDocumentAccess).toHaveBeenCalledWith(1);
+      expect(alert).toHaveBeenCalledWith(
+        "Solicitação de acesso enviada com sucesso."
+      );
+    });
     expect(getModal()).toBeInTheDocument();
     expect(
       screen.queryByRole("dialog", { name: /Visualização de Manual do sistema.pdf/ })
     ).not.toBeInTheDocument();
+  });
+
+  it("informa quando o usuário já possui solicitação de acesso para o documento", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.mocked(requestDocumentAccess).mockResolvedValue({ created: false });
+    vi.mocked(fetchDocumentById).mockResolvedValue({
+      ...documentDetail,
+      acesso_permitido: false,
+    });
+
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
+    openFirstDocument();
+
+    await waitFor(() => {
+      expect(getModal()).toHaveTextContent("Acesso Bloqueado");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Acesso" }));
+
+    await waitFor(() => {
+      expect(alert).toHaveBeenCalledWith(
+        "Você já possui uma solicitação de acesso para este documento."
+      );
+    });
+  });
+
+  it("informa a falha ao solicitar acesso", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const consoleSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    vi.mocked(requestDocumentAccess).mockRejectedValue(new Error("falha"));
+    vi.mocked(fetchDocumentById).mockResolvedValue({
+      ...documentDetail,
+      acesso_permitido: false,
+    });
+
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
+    openFirstDocument();
+
+    await waitFor(() => {
+      expect(getModal()).toHaveTextContent("Acesso Bloqueado");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Acesso" }));
+
+    await waitFor(() => {
+      expect(alert).toHaveBeenCalledWith(
+        "Não foi possível enviar a solicitação de acesso. Tente novamente."
+      );
+    });
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Erro ao solicitar acesso ao documento:",
+      expect.any(Error)
+    );
   });
 
   it("mantém Editar habilitado, mas bloqueia a edição sem a role operador", async () => {

@@ -112,6 +112,8 @@ export default function DocumentModal({
   onViewPdf,
   onView,
   onEdit,
+  onRequestAccess,
+  requestAccessLoading = false,
   editPermissionError = "",
   loading = false,
   error = null,
@@ -169,7 +171,11 @@ export default function DocumentModal({
   }
 
   function handleRequestAccess() {
-    window.alert("Funcionalidade de solicitação de acesso em desenvolvimento.");
+    if (requestAccessLoading) {
+      return;
+    }
+
+    onRequestAccess?.(document);
   }
 
   function handleKeyDown(event) {
@@ -395,8 +401,9 @@ export default function DocumentModal({
           {accessRestricted && !loading && !error && (
             <button
               type="button"
-              className="mr-auto inline-flex min-h-[42px] cursor-pointer items-center justify-center gap-[9px] rounded-[9px] border border-[#7a0026] bg-[#7a0026] px-4 text-[15px] font-semibold text-white shadow-[0_3px_8px_rgba(122,0,38,0.18)] transition-[background-color,transform] duration-150 hover:-translate-y-px hover:bg-[#60001e] max-md:w-full max-md:text-center"
+              className="mr-auto inline-flex min-h-[42px] cursor-pointer items-center justify-center gap-[9px] rounded-[9px] border border-[#7a0026] bg-[#7a0026] px-4 text-[15px] font-semibold text-white shadow-[0_3px_8px_rgba(122,0,38,0.18)] transition-[background-color,transform] duration-150 hover:-translate-y-px hover:bg-[#60001e] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 max-md:w-full max-md:text-center"
               onClick={handleRequestAccess}
+              disabled={requestAccessLoading}
             >
               <span className="relative inline-flex items-center" aria-hidden="true">
                 <FiFile size={20} />

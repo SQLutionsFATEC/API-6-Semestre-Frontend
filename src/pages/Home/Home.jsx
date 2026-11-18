@@ -21,6 +21,7 @@ import {
   fetchDocumentById,
   fetchDocuments,
 } from "../../services/documentService";
+import { requestDocumentAccess } from "../../services/accessRequestService";
 import { clearLocalSession } from "../../services/keycloak";
 import { deleteOwnAccount, fetchUserProfile } from "../../services/userService";
 import {
@@ -70,6 +71,7 @@ function Home({ documentsRefreshKey = 0 }) {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editPermissionError, setEditPermissionError] = useState("");
+  const [requestAccessLoading, setRequestAccessLoading] = useState(false);
   const [restrictedModalOpen, setRestrictedModalOpen] = useState(false);
   const [pdfViewerDocument, setPdfViewerDocument] = useState(null);
 
@@ -337,6 +339,34 @@ function Home({ documentsRefreshKey = 0 }) {
     }
   }
 
+  async function handleRequestAccess(document) {
+    const idDocumento = document?.id_documento ?? document?.id;
+
+    if (idDocumento === undefined || idDocumento === null) {
+      window.alert("Não foi possível enviar a solicitação de acesso. Tente novamente.");
+      return;
+    }
+
+    setRequestAccessLoading(true);
+
+    try {
+      const { created } = await requestDocumentAccess(idDocumento);
+
+      window.alert(
+        created
+          ? "Solicitação de acesso enviada com sucesso."
+          : "Você já possui uma solicitação de acesso para este documento."
+      );
+    } catch (err) {
+      console.error("Erro ao solicitar acesso ao documento:", err);
+      window.alert(
+        "Não foi possível enviar a solicitação de acesso. Tente novamente."
+      );
+    } finally {
+      setRequestAccessLoading(false);
+    }
+  }
+
   function handleEditDocument(document) {
     if (document?.acesso_permitido === false) return;
 
@@ -565,6 +595,8 @@ function Home({ documentsRefreshKey = 0 }) {
           onRetry={handleRetryDocumentDetails}
           onViewPdf={handleViewPdf}
           onEdit={handleEditDocument}
+          onRequestAccess={handleRequestAccess}
+          requestAccessLoading={requestAccessLoading}
           editPermissionError={editPermissionError}
         />
       )}
