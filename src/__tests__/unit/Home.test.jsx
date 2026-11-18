@@ -21,6 +21,11 @@ import {
   updateUserConsents,
 } from "../../services/termsService";
 import {
+  acknowledgeLeakIncident,
+  fetchLatestLeakIncident,
+  isLeakIncidentAcknowledged,
+} from "../../services/leakWarningService";
+import {
   deleteOwnAccount,
   fetchUserProfile,
 } from "../../services/userService";
@@ -38,6 +43,7 @@ vi.mock("../../services/userService", () => ({
 }));
 
 vi.mock("../../services/keycloak", () => ({
+  keycloak: { subject: "usuario-teste" },
   clearLocalSession: vi.fn(),
 }));
 
@@ -47,6 +53,12 @@ vi.mock("../../services/termsService", () => ({
   acceptTerms: vi.fn(),
   updateUserConsents: vi.fn(),
   anonymizeAccount: vi.fn(),
+}));
+
+vi.mock("../../services/leakWarningService", () => ({
+  fetchLatestLeakIncident: vi.fn(),
+  isLeakIncidentAcknowledged: vi.fn(),
+  acknowledgeLeakIncident: vi.fn(),
 }));
 
 vi.mock("../../components/SearchBar/SearchBar", () => ({
@@ -288,6 +300,8 @@ beforeEach(() => {
     { id: 1, description: "Termo obrigatório", required: true },
   ]);
   fetchUserConsents.mockResolvedValue([]);
+  fetchLatestLeakIncident.mockResolvedValue(null);
+  isLeakIncidentAcknowledged.mockReturnValue(false);
 });
 
 afterEach(() => {
@@ -759,6 +773,10 @@ describe("Home", () => {
 
   it("deve exibir o aviso de vazamento após o usuário aceitar os termos", async () => {
     acceptTerms.mockResolvedValue({ success: true });
+    fetchLatestLeakIncident.mockResolvedValue({
+      id: "incidente-1",
+      timestamp: "2026-11-01T12:00:00Z",
+    });
 
     render(<Home />);
 
@@ -790,6 +808,41 @@ describe("Home", () => {
     });
     fireEvent.click(closeButton);
 
+    expect(
+      screen.queryByText(/Aviso de vazamento de Dados/i)
+    ).not.toBeInTheDocument();
+    expect(acknowledgeLeakIncident).toHaveBeenCalledWith(
+      "incidente-1",
+      "usuario-teste"
+    );
+  });
+
+  it("não exibe o aviso quando não há incidente de vazamento registrado", async () => {
+    fetchUserConsents.mockResolvedValue([1]);
+    fetchLatestLeakIncident.mockResolvedValue(null);
+
+    await loadHome();
+
+    expect(fetchLatestLeakIncident).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByText(/Aviso de vazamento de Dados/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("não exibe o aviso para um incidente que o usuário já fechou", async () => {
+    fetchUserConsents.mockResolvedValue([1]);
+    fetchLatestLeakIncident.mockResolvedValue({
+      id: "incidente-1",
+      timestamp: "2026-11-01T12:00:00Z",
+    });
+    isLeakIncidentAcknowledged.mockReturnValue(true);
+
+    await loadHome();
+
+    expect(isLeakIncidentAcknowledged).toHaveBeenCalledWith(
+      "incidente-1",
+      "usuario-teste"
+    );
     expect(
       screen.queryByText(/Aviso de vazamento de Dados/i)
     ).not.toBeInTheDocument();
