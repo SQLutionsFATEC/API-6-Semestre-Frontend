@@ -13,3 +13,14 @@ export async function fetchUserProfile() {
   const response = await api.get("/api/perfil/");
   return response.data;
 }
+
+export async function fetchUserById(idUsuario) {
+  if (!idUsuario) {
+    throw new Error("O identificador do usuário é obrigatório.");
+  }
+
+  const response = await api.get(
+    `/api/usuarios/${encodeURIComponent(idUsuario)}/`
+  );
+  return response.data;
+}

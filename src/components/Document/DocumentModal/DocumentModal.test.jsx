@@ -204,16 +204,31 @@ describe("DocumentModal", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("exibe um alerta ao solicitar acesso", () => {
-    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
-    renderModal({
-      document: { ...documentData, acesso_permitido: false },
-    });
+  it("encaminha a solicitação de acesso ao callback", () => {
+    const onRequestAccess = vi.fn();
+    const restrictedDocument = { ...documentData, acesso_permitido: false };
+    renderModal({ document: restrictedDocument, onRequestAccess });
 
     fireEvent.click(screen.getByRole("button", { name: "Solicitar Acesso" }));
-    expect(alert).toHaveBeenCalledWith(
-      "Funcionalidade de solicitação de acesso em desenvolvimento."
-    );
+
+    expect(onRequestAccess).toHaveBeenCalledWith(restrictedDocument);
+  });
+
+  it("desabilita a solicitação de acesso enquanto ela está sendo enviada", () => {
+    const onRequestAccess = vi.fn();
+    renderModal({
+      document: { ...documentData, acesso_permitido: false },
+      onRequestAccess,
+      requestAccessLoading: true,
+    });
+
+    const requestButton = screen.getByRole("button", {
+      name: "Solicitar Acesso",
+    });
+    expect(requestButton).toBeDisabled();
+
+    fireEvent.click(requestButton);
+    expect(onRequestAccess).not.toHaveBeenCalled();
   });
 
   it("desabilita o botão de editar quando o documento é restrito", () => {
