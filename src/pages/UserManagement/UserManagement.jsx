@@ -233,7 +233,7 @@ export default function UserManagement() {
       }
     }
 
-    carregarUsuarios();
+    void carregarUsuarios();
     return () => {
       ativo = false;
     };
