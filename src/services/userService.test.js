@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import api from "./api";
 import {
   deleteOwnAccount,
+  fetchManagedUsers,
   fetchUserById,
   fetchUserProfile,
+  updateManagedUser,
   updateProfile,
 } from "./userService";
 
@@ -91,6 +93,25 @@ describe("userService", () => {
       await expect(fetchUserProfile()).rejects.toThrow(
         "Falha ao buscar perfil"
       );
+    });
+  });
+
+  describe("fetchManagedUsers", () => {
+    it("lista usuários pela rota administrativa", async () => {
+      api.get.mockResolvedValue({ data: [{ id: "u1", nome: "Ana" }] });
+
+      await expect(fetchManagedUsers()).resolves.toEqual([{ id: "u1", nome: "Ana" }]);
+      expect(api.get).toHaveBeenCalledWith("/api/usuarios/", {});
+    });
+  });
+
+  describe("updateManagedUser", () => {
+    it("envia PATCH para o usuário selecionado", async () => {
+      const data = { setor: "Jurídico", nivel_acesso: "Comercial" };
+      api.patch.mockResolvedValue({ data: { id: "u1", ...data } });
+
+      await expect(updateManagedUser("u1", data)).resolves.toEqual({ id: "u1", ...data });
+      expect(api.patch).toHaveBeenCalledWith("/api/usuarios/u1/", data);
     });
   });
 
