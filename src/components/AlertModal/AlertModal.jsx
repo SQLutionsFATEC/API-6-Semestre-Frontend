@@ -22,7 +22,7 @@ const ALERT_STYLES = {
       "bg-[#7A0026] text-white hover:bg-[#5e001d] focus-visible:outline-[#7A0026]",
     actionLabel: "Entendi",
   },
-};.
+};
 
 function AlertModal({ isOpen, type = "success", title, message, onClose }) {
   useEffect(() => {
