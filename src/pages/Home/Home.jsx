@@ -1,9 +1,4 @@
-import {
-  FiAlertCircle,
-  FiFileText,
-  FiFilter,
-  FiUser,
-} from "react-icons/fi";
+import { FiAlertCircle, FiFileText, FiFilter } from "react-icons/fi";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import AlertModal from "../../components/AlertModal/AlertModal";
@@ -17,13 +12,30 @@ import Pagination from "../../components/Pagination/Pagination";
 import SearchBar from "../../components/SearchBar/SearchBar";
 import UserModal from "../../components/UserModal/UserModal";
 import UploadModal from "../../components/Document/UploadModal/UploadModal";
+import TermsModal from "../../components/TermsModal/TermsModal";
+import ConsentManagerModal from "../../components/TermsModal/ConsentManagerModal";
+import LeakWarning from "../../components/LeakWarning/LeakWarning";
+import UserMenu from "../../components/UserMenu/UserMenu";
 
 import {
   fetchDocumentById,
   fetchDocuments,
 } from "../../services/documentService";
+import { requestDocumentAccess } from "../../services/accessRequestService";
 import { clearLocalSession } from "../../services/keycloak";
 import { deleteOwnAccount, fetchUserProfile } from "../../services/userService";
+import {
+  fetchTerms,
+  fetchUserConsents,
+  acceptTerms,
+  updateUserConsents,
+  anonymizeAccount,
+} from "../../services/termsService";
+import {
+  acknowledgeLeakIncident,
+  fetchLatestLeakIncident,
+  isLeakIncidentAcknowledged,
+} from "../../services/leakWarningService";
 
 import "./Home.css";
 import { keycloak } from "../../services/keycloak";
@@ -59,6 +71,7 @@ function Home({ documentsRefreshKey = 0 }) {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editPermissionError, setEditPermissionError] = useState("");
+  const [requestAccessLoading, setRequestAccessLoading] = useState(false);
   const [restrictedModalOpen, setRestrictedModalOpen] = useState(false);
   const [pdfViewerDocument, setPdfViewerDocument] = useState(null);
 
@@ -71,6 +84,13 @@ function Home({ documentsRefreshKey = 0 }) {
     level: "—",
   });
   const [userDeletionFeedback, setUserDeletionFeedback] = useState(null);
+  
+  const [terms, setTerms] = useState([]);
+  const [consents, setConsents] = useState([]);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [isConsentManagerOpen, setIsConsentManagerOpen] = useState(false);
+  const [isLeakWarningOpen, setIsLeakWarningOpen] = useState(false);
+  const [leakIncident, setLeakIncident] = useState(null);
 
   const [refreshKey, setRefreshKey] = useState(0);
   const detailRequestId = useRef(0);
@@ -83,8 +103,24 @@ function Home({ documentsRefreshKey = 0 }) {
     setPdfViewerDocument(null);
   }, []);
 
+  const currentUserId = keycloak?.subject ?? keycloak?.tokenParsed?.sub ?? "";
+
+  const checkLeakWarning = useCallback(async () => {
+    try {
+      const incident = await fetchLatestLeakIncident();
+
+      if (!incident?.id) return;
+      if (isLeakIncidentAcknowledged(incident.id, currentUserId)) return;
+
+      setLeakIncident(incident);
+      setIsLeakWarningOpen(true);
+    } catch (err) {
+      console.error("Erro ao verificar incidentes de vazamento:", err);
+    }
+  }, [currentUserId]);
+
   useEffect(() => {
-    async function loadUser() {
+    async function loadUserAndTerms() {
       try {
         const userData = await fetchUserProfile();
         setCurrentUser({
@@ -93,16 +129,32 @@ function Home({ documentsRefreshKey = 0 }) {
           role: userData.setor,
           level: userData.nivel_acesso,
         });
+
+        const fetchedTerms = await fetchTerms();
+        setTerms(fetchedTerms);
+
+        const userConsents = await fetchUserConsents();
+        setConsents(userConsents);
+
+        const hasPendingRequiredTerm = fetchedTerms.some(
+          (term) => term.required && !userConsents.includes(term.id)
+        );
+
+        if (hasPendingRequiredTerm) {
+          setIsTermsModalOpen(true);
+        } else {
+          await checkLeakWarning();
+        }
       } catch (err) {
-        console.error("Erro ao carregar perfil do usuário:", err);
+        console.error("Erro ao carregar perfil ou termos:", err);
         setCurrentUser({ name: "Usuário", email: "—", role: "—", level: "—" });
       }
     }
 
-    loadUser().catch((err) => {
-      console.error("Erro inesperado ao carregar usuário:", err);
+    loadUserAndTerms().catch((err) => {
+      console.error("Erro inesperado:", err);
     });
-  }, []);
+  }, [checkLeakWarning]);
 
   useEffect(() => {
     let cancelled = false;
@@ -287,13 +339,44 @@ function Home({ documentsRefreshKey = 0 }) {
     }
   }
 
+  async function handleRequestAccess(document) {
+    const idDocumento = document?.id_documento ?? document?.id;
+
+    if (idDocumento === undefined || idDocumento === null) {
+      window.alert("Não foi possível enviar a solicitação de acesso. Tente novamente.");
+      return;
+    }
+
+    setRequestAccessLoading(true);
+
+    try {
+      const { created } = await requestDocumentAccess(idDocumento);
+
+      window.alert(
+        created
+          ? "Solicitação de acesso enviada com sucesso."
+          : "Você já possui uma solicitação de acesso para este documento."
+      );
+    } catch (err) {
+      console.error("Erro ao solicitar acesso ao documento:", err);
+      window.alert(
+        "Não foi possível enviar a solicitação de acesso. Tente novamente."
+      );
+    } finally {
+      setRequestAccessLoading(false);
+    }
+  }
+
   function handleEditDocument(document) {
     if (document?.acesso_permitido === false) return;
 
-    const isOperator = keycloak.hasRealmRole("operador") ||
+    const isOperator =
+      keycloak.hasRealmRole("operador") ||
       keycloak.tokenParsed?.realm_access?.roles?.includes("operador");
     if (!isOperator) {
-      setEditPermissionError("Somente usuários com a role Operador podem editar documentos. Solicite a um operador que faça a alteração.");
+      setEditPermissionError(
+        "Somente usuários com a role Operador podem editar documentos. Solicite a um operador que faça a alteração."
+      );
       return;
     }
 
@@ -349,7 +432,7 @@ function Home({ documentsRefreshKey = 0 }) {
             : "Tente novamente mais tarde.",
       });
 
-      // Mantém a confirmação aberta para que o usuário possa tentar de novo.
+            // Mantém a confirmação aberta para que o usuário possa tentar de novo.      
       throw err;
     }
 
@@ -366,8 +449,45 @@ function Home({ documentsRefreshKey = 0 }) {
 
     setUserDeletionFeedback(null);
 
-    // Só encerra a sessão depois que o usuário viu o retorno da exclusão.
+        // Só encerra a sessão depois que o usuário viu o retorno da exclusão.    
     if (feedback?.type === "success") {
+      clearLocalSession();
+    }
+  }
+
+  async function handleAcceptTerms(acceptedTermIds) {
+    try {
+      await acceptTerms(acceptedTermIds);
+      setConsents(acceptedTermIds);
+      setIsTermsModalOpen(false);
+      await checkLeakWarning();
+    } catch (err) {
+      console.error("Erro ao aceitar os termos:", err);
+    }
+  }
+
+  async function handleSaveConsents(acceptedTermIds) {
+    await updateUserConsents(acceptedTermIds);
+    setConsents(acceptedTermIds);
+    setIsConsentManagerOpen(false);
+  }
+
+  function handleCloseLeakWarning() {
+    if (leakIncident?.id) {
+      acknowledgeLeakIncident(leakIncident.id, currentUserId);
+    }
+
+    setLeakIncident(null);
+    setIsLeakWarningOpen(false);
+  }
+
+  async function handleDeclineTerms() {
+    try {
+      await anonymizeAccount();
+    } catch (err) {
+      console.error("Erro ao anonimizar conta:", err);
+    } finally {
+      setIsTermsModalOpen(false);
       clearLocalSession();
     }
   }
@@ -417,23 +537,17 @@ function Home({ documentsRefreshKey = 0 }) {
             )}
           </button>
 
-          <button
-            type="button"
-            className="user-trigger"
-            onClick={() => setIsUserModalOpen(true)}
-            aria-label="Abrir perfil do usuário"
-          >
-            <FiUser size={18} />
-            <span>{currentUser.name}</span>
-          </button>
+          <UserMenu
+            user={currentUser}
+            onOpenProfile={() => setIsUserModalOpen(true)}
+            onOpenConsent={() => setIsConsentManagerOpen(true)}
+          />
         </div>
       </header>
 
       <section className="documents-section">
         {loading && (
-          <p className="loading-message">
-            Carregando documentos...
-          </p>
+          <p className="loading-message">Carregando documentos...</p>
         )}
 
         {error && (
@@ -441,9 +555,7 @@ function Home({ documentsRefreshKey = 0 }) {
             <FiAlertCircle size={22} />
 
             <div className="error-text">
-              <span className="error-title">
-                Erro ao carregar
-              </span>
+              <span className="error-title">Erro ao carregar</span>
               <span className="error-description">{error}</span>
             </div>
           </div>
@@ -483,6 +595,8 @@ function Home({ documentsRefreshKey = 0 }) {
           onRetry={handleRetryDocumentDetails}
           onViewPdf={handleViewPdf}
           onEdit={handleEditDocument}
+          onRequestAccess={handleRequestAccess}
+          requestAccessLoading={requestAccessLoading}
           editPermissionError={editPermissionError}
         />
       )}
@@ -534,6 +648,29 @@ function Home({ documentsRefreshKey = 0 }) {
           handleOpenDocument(documentoCriado);
         }}
       />
+
+      {/* Modal de Termos e Condições */}
+      {isTermsModalOpen && terms.length > 0 && (
+        <TermsModal
+          terms={terms}
+          onAccept={handleAcceptTerms}
+          onDecline={handleDeclineTerms}
+        />
+      )}
+
+      {isConsentManagerOpen && terms.length > 0 && (
+        <ConsentManagerModal
+          terms={terms}
+          acceptedTermIds={consents}
+          onSave={handleSaveConsents}
+          onClose={() => setIsConsentManagerOpen(false)}
+        />
+      )}
+
+      {/* Modal de Aviso de Vazamento (Aparece após o de Termos) */}
+      {isLeakWarningOpen && (
+        <LeakWarning onClose={handleCloseLeakWarning} />
+      )}
     </div>
   );
 }

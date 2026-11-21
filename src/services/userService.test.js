@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import api from "./api";
 import {
   deleteOwnAccount,
+  fetchUserById,
   fetchUserProfile,
   updateProfile,
 } from "./userService";
@@ -89,6 +90,49 @@ describe("userService", () => {
 
       await expect(fetchUserProfile()).rejects.toThrow(
         "Falha ao buscar perfil"
+      );
+    });
+  });
+
+  describe("fetchUserById", () => {
+    it("faz uma requisição GET para /api/usuarios/{id}/ e retorna o usuário", async () => {
+      const mockResponse = {
+        id: "usuario-1",
+        nome: "Maria",
+        sobrenome: "Silva",
+        email: "maria@email.com",
+      };
+      api.get.mockResolvedValue({ data: mockResponse });
+
+      const result = await fetchUserById("usuario-1");
+
+      expect(api.get).toHaveBeenCalledWith("/api/usuarios/usuario-1/");
+      expect(result).toEqual(mockResponse);
+    });
+
+    it("codifica o identificador na URL", async () => {
+      api.get.mockResolvedValue({ data: {} });
+
+      await fetchUserById("id com espaço");
+
+      expect(api.get).toHaveBeenCalledWith(
+        "/api/usuarios/id%20com%20espa%C3%A7o/"
+      );
+    });
+
+    it("lança erro quando o identificador não é informado", async () => {
+      await expect(fetchUserById("")).rejects.toThrow(
+        "O identificador do usuário é obrigatório."
+      );
+
+      expect(api.get).not.toHaveBeenCalled();
+    });
+
+    it("propaga o erro da API caso a requisição falhe", async () => {
+      api.get.mockRejectedValue(new Error("Falha ao buscar usuário"));
+
+      await expect(fetchUserById("usuario-1")).rejects.toThrow(
+        "Falha ao buscar usuário"
       );
     });
   });
