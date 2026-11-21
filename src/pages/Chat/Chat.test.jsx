@@ -41,14 +41,14 @@ describe("Chat", () => {
     ).toBeInTheDocument();
   });
 
-  it("envia a pergunta e renderiza a resposta e suas fontes", async () => {
+  it("envia a pergunta e renderiza a resposta e suas fontes no formato do backend", async () => {
     vi.mocked(sendChatMessage).mockResolvedValue({
-      resposta: "A norma aborda ensaios de fadiga em estruturas.",
-      documentos: [
+      response: "A norma aborda ensaios de fadiga em estruturas.",
+      documents: [
         {
           id_documento: 23,
           nome: "Norma FAR 25.pdf",
-          trecho: "Requisitos para fadiga e integridade estrutural.",
+          conteudo: "Requisitos para fadiga e integridade estrutural.",
         },
       ],
     });
@@ -67,6 +67,33 @@ describe("Chat", () => {
     );
     expect(screen.getByText("Norma FAR 25.pdf")).toBeInTheDocument();
     expect(screen.getByText(/Requisitos para fadiga/)).toBeInTheDocument();
+
+    vi.mocked(sendChatMessage).mockResolvedValueOnce({
+      response: "Complemento sobre compósitos.",
+      documents: [],
+    });
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Sua pergunta" }), {
+      target: { value: "E sobre compósitos?" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Enviar pergunta" }));
+
+    expect(
+      await screen.findByText("Complemento sobre compósitos.")
+    ).toBeInTheDocument();
+    expect(sendChatMessage).toHaveBeenLastCalledWith(
+      "E sobre compósitos?",
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: "user",
+          content: "O que diz a FAR 25 sobre fadiga?",
+        }),
+        expect.objectContaining({
+          role: "assistant",
+          content: "A norma aborda ensaios de fadiga em estruturas.",
+        }),
+      ])
+    );
   });
 
   it("mantém o foco no campo durante e após o envio com Enter", async () => {
