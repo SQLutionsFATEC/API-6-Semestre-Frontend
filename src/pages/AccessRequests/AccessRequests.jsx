@@ -19,20 +19,28 @@ import {
 // O endpoint /api/solicitacoes-acesso/ pagina de 10 em 10.
 const REQUESTS_PAGE_SIZE = 10;
 
+// O backend envia data_solicitacao em UTC (USE_TZ=True). Quando o valor vem
+// sem fuso explícito, tratamos como UTC; a exibição usa o fuso do navegador.
+function parseRequestDate(dateValue) {
+  const raw = String(dateValue).trim();
+  const hasTimeZone = /(Z|[+-]\d{2}:?\d{2})$/i.test(raw);
+  const hasTime = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw);
+
+  return new Date(!hasTimeZone && hasTime ? `${raw}Z` : raw);
+}
+
 function formatRequestDate(dateValue) {
   if (dateValue === null || dateValue === undefined || dateValue === "") {
     return "-";
   }
 
-  const date = new Date(dateValue);
+  const date = parseRequestDate(dateValue);
 
   if (Number.isNaN(date.getTime())) {
     return String(dateValue);
   }
 
-  return date.toLocaleDateString("pt-BR", {
-    timeZone: "UTC",
-  });
+  return date.toLocaleDateString("pt-BR");
 }
 
 export default function AccessRequests() {
@@ -192,6 +200,11 @@ export default function AccessRequests() {
                     Data:
                   </span>
                   {formatRequestDate(request.data_solicitacao)}
+                  {request.approved === true && (
+                    <span className="ml-1 font-semibold text-emerald-700">
+                      (Aprovada)
+                    </span>
+                  )}
                 </time>
                 <div className="flex items-center justify-end gap-[7px] max-[800px]:col-start-3 max-[800px]:row-span-3 max-[800px]:row-start-1">
                   <button
@@ -199,7 +212,14 @@ export default function AccessRequests() {
                     className="inline-flex h-[22px] w-[22px] cursor-pointer items-center justify-center rounded-[2px] border border-[#7a1452] bg-[#7a1452] p-0 text-white hover:brightness-90 disabled:cursor-not-allowed disabled:opacity-60"
                     aria-label={`Aprovar solicitação de ${request.solicitanteNome} para ${request.documentoNome}`}
                     onClick={() => handleReview(request, true)}
-                    disabled={updatingRequestId !== null}
+                    disabled={
+                      updatingRequestId !== null || request.approved === true
+                    }
+                    title={
+                      request.approved === true
+                        ? "Solicitação já aprovada"
+                        : "Aprovar"
+                    }
                   >
                     <FiCheck size={17} aria-hidden="true" />
                   </button>

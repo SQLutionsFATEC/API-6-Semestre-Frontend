@@ -201,6 +201,31 @@ describe("AccessRequests", () => {
     });
   });
 
+  it("marca a solicitação já aprovada e não permite aprová-la de novo", async () => {
+    mockPage([
+      {
+        ...PAGE_ONE[0],
+        approved: true,
+      },
+    ]);
+
+    render(<AccessRequests />);
+
+    const [request] = await screen.findAllByRole("article");
+
+    expect(within(request).getByText("(Aprovada)")).toBeInTheDocument();
+    expect(
+      within(request).getByRole("button", {
+        name: "Aprovar solicitação de Maria Silva para FAR Part 25.571: Avaliação de Tolerância ao Dano",
+      })
+    ).toBeDisabled();
+    expect(
+      within(request).getByRole("button", {
+        name: "Recusar solicitação de Maria Silva para FAR Part 25.571: Avaliação de Tolerância ao Dano",
+      })
+    ).toBeEnabled();
+  });
+
   it("recusa a solicitação e alerta o sucesso da ação", async () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     mockPage(PAGE_ONE);
