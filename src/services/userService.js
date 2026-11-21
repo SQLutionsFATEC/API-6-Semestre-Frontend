@@ -24,3 +24,21 @@ export async function fetchUserById(idUsuario) {
   );
   return response.data;
 }
+
+export async function fetchManagedUsers(search = "") {
+  const params = search ? { params: { busca: search } } : {};
+  const response = await api.get("/api/usuarios/", params);
+  return response.data;
+}
+
+export async function updateManagedUser(idUsuario, data) {
+  if (!idUsuario) {
+    throw new Error("O identificador do usuário é obrigatório.");
+  }
+
+  const response = await api.patch(
+    `/api/usuarios/${encodeURIComponent(idUsuario)}/`,
+    data
+  );
+  return response.data;
+}
