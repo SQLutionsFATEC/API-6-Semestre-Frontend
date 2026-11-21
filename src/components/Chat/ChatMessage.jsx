@@ -37,9 +37,11 @@ function getSourceExcerpt(source) {
   return (
     source.trecho ??
     source.trecho_relevante ??
+    source.conteudo ??
     source.excerpt ??
     source.snippet ??
     source.documento?.trecho ??
+    source.documento?.conteudo ??
     ""
   );
 }

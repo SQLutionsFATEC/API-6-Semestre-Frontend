@@ -1,16 +1,61 @@
+import api from "./api";
+
+function normalizeContextMessages(messages = []) {
+  const validMessages = [];
+
+  for (let index = 0; index < messages.length; index += 1) {
+    const item = messages[index];
+
+    if (typeof item === "string") {
+      const trimmed = item.trim();
+      if (trimmed) {
+        validMessages.push(trimmed);
+      }
+      continue;
+    }
+
+    if (item && typeof item === "object") {
+      if (item.isError) {
+        if (
+          item.role === "assistant" &&
+          validMessages.length > 0 &&
+          messages[index - 1]?.role === "user"
+        ) {
+          validMessages.pop();
+        }
+        continue;
+      }
+
+      const trimmed =
+        typeof item.content === "string" ? item.content.trim() : "";
+      if (trimmed) {
+        validMessages.push(trimmed);
+      }
+    }
+  }
+
+  return validMessages;
+}
+
 /**
- * Temporary mock while the chat endpoint is unavailable.
- * Keep this signature so the API call can replace the mock when the endpoint exists.
+ * Envia o histórico de mensagens da conversa para a rota autenticada de RAG (/api/chat/).
+ * Utiliza timeout: 0 para evitar timeout mesmo quando a geração da resposta demorar.
  */
-export function sendChatMessage(question) {
-  void question;
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        resposta:
-          "Encontrei alguns documentos relacionados a sua pesquisa, seriam: FAR-271.75 e MLT-HDBK-3927. Encontrou o que precisava? Ou os não são estes documentos?",
-        fontes: [],
-      });
-    }, 5000);
-  });
+export async function sendChatMessage(questionOrContext, history = []) {
+  const context = Array.isArray(questionOrContext)
+    ? normalizeContextMessages(questionOrContext)
+    : [
+        ...normalizeContextMessages(history),
+        ...(typeof questionOrContext === "string" && questionOrContext.trim()
+          ? [questionOrContext.trim()]
+          : []),
+      ];
+
+  const response = await api.post(
+    "/api/chat/",
+    { context },
+    { timeout: 0 }
+  );
+
+  return response.data;
 }
