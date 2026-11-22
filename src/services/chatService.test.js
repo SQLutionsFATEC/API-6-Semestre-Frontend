@@ -1,28 +1,77 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import api from "./api";
 import { sendChatMessage } from "./chatService";
 
-afterEach(() => {
-  vi.useRealTimers();
+vi.mock("./api", () => ({
+  default: { post: vi.fn() },
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
 });
 
 describe("sendChatMessage", () => {
-  it("retorna a resposta template após cinco segundos", async () => {
-    vi.useFakeTimers();
-    const request = sendChatMessage("Onde está o procedimento?");
+  it("envia a pergunta no campo context sem timeout para o endpoint autenticado", async () => {
+    const payload = {
+      response: "Resposta baseada nos documentos.",
+      documents: [],
+    };
+    vi.mocked(api.post).mockResolvedValue({ data: payload });
 
-    let resolved = false;
-    request.then(() => {
-      resolved = true;
-    });
+    await expect(
+      sendChatMessage("  Onde está o procedimento?  ")
+    ).resolves.toEqual(payload);
 
-    await vi.advanceTimersByTimeAsync(4999);
-    expect(resolved).toBe(false);
+    expect(api.post).toHaveBeenCalledWith(
+      "/api/chat/",
+      { context: ["Onde está o procedimento?"] },
+      { timeout: 0 }
+    );
+  });
 
-    await vi.advanceTimersByTimeAsync(1);
-    await expect(request).resolves.toEqual({
-      resposta:
-        "Encontrei alguns documentos relacionados a sua pesquisa, seriam: FAR-271.75 e MLT-HDBK-3927. Encontrou o que precisava? Ou os não são estes documentos?",
-      fontes: [],
-    });
+  it("inclui o histórico válido da conversa e ignora turnos com erro", async () => {
+    const payload = {
+      response: "Segunda resposta do RAG.",
+      documents: [{ id_documento: 10, nome: "FAR-25.pdf", conteudo: "Trecho" }],
+    };
+    vi.mocked(api.post).mockResolvedValue({ data: payload });
+
+    const history = [
+      { role: "user", content: "Primeira pergunta" },
+      { role: "assistant", content: "Primeira resposta" },
+      { role: "user", content: "Pergunta que falhou" },
+      { role: "assistant", content: "Erro temporário", isError: true },
+      "Mensagem avulsa",
+    ];
+
+    await expect(
+      sendChatMessage("Segunda pergunta", history)
+    ).resolves.toEqual(payload);
+
+    expect(api.post).toHaveBeenCalledWith(
+      "/api/chat/",
+      {
+        context: [
+          "Primeira pergunta",
+          "Primeira resposta",
+          "Mensagem avulsa",
+          "Segunda pergunta",
+        ],
+      },
+      { timeout: 0 }
+    );
+  });
+
+  it("aceita diretamente uma lista de mensagens como contexto", async () => {
+    const payload = { response: "Resposta", documents: [] };
+    vi.mocked(api.post).mockResolvedValue({ data: payload });
+
+    await sendChatMessage(["  Pergunta 1 ", "", "Resposta 1", "Pergunta 2"]);
+
+    expect(api.post).toHaveBeenCalledWith(
+      "/api/chat/",
+      { context: ["Pergunta 1", "Resposta 1", "Pergunta 2"] },
+      { timeout: 0 }
+    );
   });
 });

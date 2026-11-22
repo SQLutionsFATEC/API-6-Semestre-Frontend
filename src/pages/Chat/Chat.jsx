@@ -30,6 +30,7 @@ function normalizeResponse(payload) {
   const sourceList =
     response.fontes ??
     response.documentos ??
+    response.documents ??
     response.sources ??
     response.references ??
     response.referencias ??
@@ -86,6 +87,7 @@ export default function Chat() {
     const trimmedQuestion = value.trim();
     if (!trimmedQuestion || loading) return;
 
+    const previousMessages = messages;
     setQuestion("");
     setMessages((current) => [
       ...current,
@@ -98,7 +100,10 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const payload = await sendChatMessage(trimmedQuestion);
+      const payload =
+        previousMessages.length > 0
+          ? await sendChatMessage(trimmedQuestion, previousMessages)
+          : await sendChatMessage(trimmedQuestion);
       const answer = normalizeResponse(payload);
       setMessages((current) => [
         ...current,
