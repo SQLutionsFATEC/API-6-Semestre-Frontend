@@ -39,6 +39,10 @@ api.interceptors.response.use(
       restartLoginAfterUnauthorized();
     }
 
+    if (error.response?.status === 451 && error.config && isApiRequest(error.config)) {
+      window.dispatchEvent(new CustomEvent('terms-required'));
+    }
+
     return Promise.reject(error);
   },
 );

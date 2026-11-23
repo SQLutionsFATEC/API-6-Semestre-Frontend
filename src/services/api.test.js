@@ -67,4 +67,20 @@ describe("api authentication interceptors", () => {
 
     expect(restartLoginAfterUnauthorized).not.toHaveBeenCalled();
   });
+
+  it("notifica a interface quando a API retorna 451", async () => {
+    const handler = vi.fn();
+    window.addEventListener("terms-required", handler);
+    api.defaults.adapter = vi.fn((config) => {
+      const error = new Error("Terms required");
+      error.config = config;
+      error.response = { status: 451, config };
+      return Promise.reject(error);
+    });
+
+    await expect(api.get("/api/documentos/")).rejects.toThrow("Terms required");
+
+    expect(handler).toHaveBeenCalledOnce();
+    window.removeEventListener("terms-required", handler);
+  });
 });

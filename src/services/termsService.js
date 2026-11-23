@@ -1,51 +1,57 @@
-const MOCK_TERMS = [
-  {
-    id: 1,
-    description: "Utilização e coleta de seu nome",
-    required: true,
-  },
-  {
-    id: 2,
-    description: "Utilização e coleta de seu e-mail (Opcional)",
-    required: false,
-  },
-];
+import api from "./api";
 
-// Termos aceitos pelo usuário autenticado (simulação local enquanto não há endpoint).
-let acceptedTermIds = [];
+function mapTerms(data) {
+  if (!Array.isArray(data?.clausulas)) {
+    throw new Error("A resposta do endpoint de consentimento é inválida.");
+  }
 
-function delay(milliseconds) {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  return data.clausulas.map((clause) => ({
+    id: clause.id_clausula,
+    description: clause.desc,
+    required: clause.obrigatoria,
+    accepted: clause.aceita,
+  }));
+}
+
+function getAcceptedIds(terms) {
+  return terms.filter((term) => term.accepted === true).map((term) => term.id);
+}
+
+async function fetchConsentTerms() {
+  const response = await api.get("/api/consentimento/");
+  return mapTerms(response.data);
 }
 
 export async function fetchTerms() {
-  await delay(300);
-  return MOCK_TERMS.map((term) => ({ ...term }));
+  const terms = await fetchConsentTerms();
+  return terms.map(({ id, description, required }) => ({
+    id,
+    description,
+    required,
+  }));
 }
 
 export async function fetchUserConsents() {
-  await delay(200);
-  return [...acceptedTermIds];
+  return getAcceptedIds(await fetchConsentTerms());
 }
 
-export async function updateUserConsents(termIds) {
-  const knownTermIds = new Set(MOCK_TERMS.map((term) => term.id));
+export async function updateUserConsents(termIds, terms) {
+  if (!Array.isArray(terms) || terms.length === 0) {
+    throw new Error("Não há cláusulas carregadas para atualizar.");
+  }
 
-  acceptedTermIds = [
-    ...new Set(termIds.filter((termId) => knownTermIds.has(termId))),
-  ];
+  const acceptedIds = new Set(termIds);
+  const consentUpdates = Object.fromEntries(
+    terms.map((term) => [String(term.id), acceptedIds.has(term.id)])
+  );
+  const response = await api.patch("/api/consentimento/", consentUpdates);
 
-  console.log("✅ [MOCK] Consentimentos atualizados com sucesso:", acceptedTermIds);
-
-  return { success: true, accepted: [...acceptedTermIds] };
+  return {
+    success: true,
+    accepted: getAcceptedIds(mapTerms(response.data)),
+  };
 }
 
-export async function acceptTerms(acceptedIds) {
-  return updateUserConsents(acceptedIds);
-}
-
-export async function anonymizeAccount() {
-  acceptedTermIds = [];
-  console.log("⚠️ [MOCK] Conta anonimizada (simulação)");
-  return { success: true };
+export async function acceptTerms(acceptedIds, terms) {
+  return updateUserConsents(acceptedIds, terms);
 }
