@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   FiChevronDown,
   FiEdit2,
@@ -8,20 +8,13 @@ import {
   FiUser,
   FiUsers,
 } from "react-icons/fi";
+import AlertModal from "../../components/AlertModal/AlertModal";
 import Pagination from "../../components/Pagination/Pagination";
+import { fetchManagedUsers, updateManagedUser } from "../../services/userService";
 
 const PAGE_SIZE = 5;
 const SECTORS = ["Técnico", "Normativo", "Jurídico", "Qualitativo"];
 const ACCESS_LEVELS = ["Básico", "Comercial", "Militar"];
-
-const MOCK_USERS = Array.from({ length: 20 }, (_, index) => ({
-  id: index + 1,
-  name: index === 3 ? "Operador de teste" : "Nome do usuário",
-  email: index === 3 ? "operador.teste@email.com" : `usuario${index + 1}@email.com`,
-  sector: "Técnico",
-  accessLevel: index === 3 ? "Operador" : "Militar",
-  isOperator: index === 3,
-}));
 
 const emailPattern = /^(?!.*\.\.)[A-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[A-Z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?(?:\.[A-Z0-9](?:[A-Z0-9-]*[A-Z0-9])?)+$/i;
 
@@ -46,7 +39,7 @@ function validateUser(user) {
   return errors;
 }
 
-function UserEditModal({ user, onClose, onSave }) {
+function UserEditModal({ user, onClose, onSave, isSaving }) {
   const [form, setForm] = useState({ ...user });
   const [errors, setErrors] = useState({});
 
@@ -75,8 +68,7 @@ function UserEditModal({ user, onClose, onSave }) {
   }
 
   const fieldClass = (hasError) =>
-    `mt-1 w-full rounded-[10px] border bg-white px-3 py-2 text-sm text-[#30343b] outline-none transition focus:border-[#8e1b54] focus:ring-2 focus:ring-[#8e1b54]/15 ${
-      hasError ? "border-red-500" : "border-[#9aa8c2]"
+    `mt-1 w-full rounded-[10px] border bg-white px-3 py-2 text-sm text-[#30343b] outline-none transition focus:border-[#8e1b54] focus:ring-2 focus:ring-[#8e1b54]/15 ${hasError ? "border-red-500" : "border-[#9aa8c2]"
     }`;
 
   return (
@@ -185,9 +177,10 @@ function UserEditModal({ user, onClose, onSave }) {
           </button>
           <button
             type="submit"
+            disabled={isSaving}
             className="inline-flex items-center gap-1.5 rounded-[11px] bg-[#86164f] px-4 py-1.5 text-sm text-white hover:bg-[#6e1041]"
           >
-            <FiEdit2 size={15} aria-hidden="true" /> Salvar alterações
+            <FiEdit2 size={15} aria-hidden="true" /> {isSaving ? "Salvando..." : "Salvar alterações"}
           </button>
         </footer>
       </form>
@@ -196,35 +189,130 @@ function UserEditModal({ user, onClose, onSave }) {
 }
 
 export default function UserManagement() {
-  const [users, setUsers] = useState(MOCK_USERS);
+  const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [alert, setAlert] = useState(null);
   const totalPages = Math.ceil(users.length / PAGE_SIZE);
   const visibleUsers = useMemo(
     () => users.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE),
     [currentPage, users]
   );
 
-  function saveUser(updatedUser) {
+  useEffect(() => {
+    let ativo = true;
+
+    async function carregarUsuarios() {
+      try {
+        const usuarios = await fetchManagedUsers();
+        if (!ativo) return;
+
+        const usuariosNormalizados = usuarios.map((usuario) => ({
+          id: usuario.id,
+          name: usuario.nome || usuario.username || "",
+          email: usuario.email || "",
+          sector: normalizeSector(usuario.setor),
+          accessLevel: capitalizeFirst(usuario.nivel_acesso),
+          isOperator: String(usuario.nivel_acesso).toLowerCase() === "operador",
+        }));
+        setUsers(usuariosNormalizados);
+        setCurrentPage(1);
+      } catch (error) {
+        if (!ativo) return;
+        setAlert({
+          type: "error",
+          title: "Falha ao carregar usuários",
+          message: error.response?.data?.erro
+            || error.response?.data?.detail
+            || "Não foi possível consultar os usuários no backend.",
+        });
+      } finally {
+        if (ativo) setIsLoading(false);
+      }
+    }
+
+    void carregarUsuarios();
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  function capitalizeFirst(value) {
+    if (!value) return "";
+    return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+  }
+
+  function normalizeSector(value) {
+    const sectors = {
+      tecnico: "Técnico",
+      normativo: "Normativo",
+      juridico: "Jurídico",
+      jurídico: "Jurídico",
+      qualitativo: "Qualitativo",
+    };
+    return sectors[String(value).toLowerCase()] || "";
+  }
+
+  async function saveUser(updatedUser) {
     const originalUser = users.find((user) => user.id === updatedUser.id);
     if (originalUser?.isOperator) {
-      window.alert("Operadores não podem alterar os dados de outros operadores.");
+      setAlert({
+        type: "error",
+        title: "Edição bloqueada",
+        message: "Operadores não podem alterar os dados de outros operadores.",
+      });
       setSelectedUser(null);
       return;
     }
 
-    setUsers((currentUsers) => currentUsers.map((user) => (
-      user.id === updatedUser.id ? updatedUser : user
-    )));
-    window.alert(
-      `Usuário atualizado com sucesso:\nNome: ${updatedUser.name}\nEmail: ${updatedUser.email}\nSetor: ${updatedUser.sector}\nNível de Acesso: ${updatedUser.accessLevel}`
-    );
-    setSelectedUser(null);
+    setIsSaving(true);
+    try {
+      const usuarioAtualizado = await updateManagedUser(updatedUser.id, {
+        nome: updatedUser.name,
+        email: updatedUser.email,
+        setor: updatedUser.sector,
+        nivel_acesso: updatedUser.accessLevel,
+      });
+      const normalizedUser = {
+        id: usuarioAtualizado.id,
+        name: usuarioAtualizado.nome || updatedUser.name,
+        email: usuarioAtualizado.email || updatedUser.email,
+        sector: normalizeSector(usuarioAtualizado.setor) || updatedUser.sector,
+        accessLevel: capitalizeFirst(usuarioAtualizado.nivel_acesso) || updatedUser.accessLevel,
+        isOperator: String(usuarioAtualizado.nivel_acesso).toLowerCase() === "operador",
+      };
+
+      setUsers((currentUsers) => currentUsers.map((user) => (
+        user.id === updatedUser.id ? normalizedUser : user
+      )));
+      setAlert({
+        type: "success",
+        title: "Usuário atualizado",
+        message: `As alterações de ${normalizedUser.name} foram salvas no sistema e no Keycloak.`,
+      });
+    } catch (error) {
+      setAlert({
+        type: "error",
+        title: "Falha ao atualizar usuário",
+        message: error.response?.data?.erro
+          || error.response?.data?.detail
+          || "Não foi possível salvar as alterações. Tente novamente.",
+      });
+    } finally {
+      setIsSaving(false);
+      setSelectedUser(null);
+    }
   }
 
   function handleOpenUser(user) {
     if (user.isOperator) {
-      window.alert("Operadores não podem alterar os dados de outros operadores.");
+      setAlert({
+        type: "error",
+        title: "Edição bloqueada",
+        message: "Operadores não podem alterar os dados de outros operadores.",
+      });
       return;
     }
     setSelectedUser(user);
@@ -246,6 +334,11 @@ export default function UserManagement() {
       </header>
 
       <section className="mt-6" aria-label="Lista de usuários">
+        {isLoading && (
+          <p className="mb-3 text-sm text-[#496084]" role="status">
+            Carregando usuários...
+          </p>
+        )}
         <div className="mb-1 grid grid-cols-[minmax(160px,1fr)_minmax(125px,0.55fr)_minmax(85px,0.34fr)_minmax(105px,0.38fr)_40px] items-center gap-3 px-3 pl-[46px] text-[10px] text-[#8c6a78] max-[800px]:hidden">
           <span className="flex items-center gap-1"><FiUser size={12} /> Funcionário</span>
           <span className="flex items-center gap-1"><FiMail size={12} /> Email de contato</span>
@@ -301,8 +394,17 @@ export default function UserManagement() {
           user={selectedUser}
           onClose={() => setSelectedUser(null)}
           onSave={saveUser}
+          isSaving={isSaving}
         />
       )}
+
+      <AlertModal
+        isOpen={Boolean(alert)}
+        type={alert?.type}
+        title={alert?.title}
+        message={alert?.message}
+        onClose={() => setAlert(null)}
+      />
     </main>
   );
 }
