@@ -241,9 +241,11 @@ describe("UserModal", () => {
     fireEvent.click(screen.getByText("Confirmar"));
 
     await waitFor(() => expect(onUserDeleted).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Confirmar" })).toBeEnabled()
+    );
 
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByText(/Deseja excluir sua conta/i)).toBeInTheDocument();
-    expect(screen.getByText("Confirmar")).toBeEnabled();
   });
 });

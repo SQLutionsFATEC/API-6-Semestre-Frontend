@@ -15,6 +15,17 @@ import {
 } from "../../services/documentService";
 import { clearLocalSession } from "../../services/keycloak";
 import {
+  fetchTerms,
+  fetchUserConsents,
+  acceptTerms,
+  updateUserConsents,
+} from "../../services/termsService";
+import {
+  acknowledgeLeakIncident,
+  fetchLatestLeakIncident,
+  isLeakIncidentAcknowledged,
+} from "../../services/leakWarningService";
+import {
   deleteOwnAccount,
   fetchUserProfile,
 } from "../../services/userService";
@@ -32,7 +43,21 @@ vi.mock("../../services/userService", () => ({
 }));
 
 vi.mock("../../services/keycloak", () => ({
+  keycloak: { subject: "usuario-teste" },
   clearLocalSession: vi.fn(),
+}));
+
+vi.mock("../../services/termsService", () => ({
+  fetchTerms: vi.fn(),
+  fetchUserConsents: vi.fn(),
+  acceptTerms: vi.fn(),
+  updateUserConsents: vi.fn(),
+}));
+
+vi.mock("../../services/leakWarningService", () => ({
+  fetchLatestLeakIncident: vi.fn(),
+  isLeakIncidentAcknowledged: vi.fn(),
+  acknowledgeLeakIncident: vi.fn(),
 }));
 
 vi.mock("../../components/SearchBar/SearchBar", () => ({
@@ -228,9 +253,21 @@ async function loadHome() {
   await advanceSearchDebounce();
 }
 
-function openUserModal() {
+function openUserMenu() {
   fireEvent.click(
-    screen.getByRole("button", { name: "Abrir perfil do usuário" })
+    screen.getByRole("button", { name: "Abrir menu do usuário" })
+  );
+}
+
+function openUserModal() {
+  openUserMenu();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Meus dados" }));
+}
+
+function openConsentManager() {
+  openUserMenu();
+  fireEvent.click(
+    screen.getByRole("menuitem", { name: "Consentimento" })
   );
 }
 
@@ -258,6 +295,12 @@ beforeEach(() => {
   fetchDocuments.mockResolvedValue(documentsPage);
   fetchDocumentById.mockResolvedValue(documentDetail);
   fetchUserProfile.mockResolvedValue(MOCK_USER_PROFILE);
+  fetchTerms.mockResolvedValue([
+    { id: 1, description: "Termo obrigatório", required: true },
+  ]);
+  fetchUserConsents.mockResolvedValue([]);
+  fetchLatestLeakIncident.mockResolvedValue(null);
+  isLeakIncidentAcknowledged.mockReturnValue(false);
 });
 
 afterEach(() => {
@@ -665,5 +708,204 @@ describe("Home", () => {
         name: "Não foi possível excluir sua conta",
       })
     ).toHaveTextContent("Tente novamente mais tarde.");
+  });
+
+  it("não exibe o modal inicial de termos quando os obrigatórios já foram aceitos", async () => {
+    fetchUserConsents.mockResolvedValue([1]);
+
+    await loadHome();
+
+    expect(
+      screen.queryByRole("button", { name: /Aceitar/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("abre o modal inicial ao receber o evento de resposta 451", async () => {
+    fetchUserConsents.mockResolvedValue([1]);
+
+    await loadHome();
+    expect(
+      screen.queryByRole("button", { name: /Aceitar/i })
+    ).not.toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(new Event("terms-required"));
+    });
+
+    expect(
+      screen.getByRole("button", { name: /Aceitar/i })
+    ).toBeInTheDocument();
+  });
+
+  it("exclui a conta e encerra a sessão ao confirmar a recusa dos termos", async () => {
+    deleteOwnAccount.mockResolvedValue(undefined);
+
+    await loadHome();
+    fireEvent.click(screen.getByRole("button", { name: /Recusar/i }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+      await flushPromises();
+    });
+
+    expect(deleteOwnAccount).toHaveBeenCalledOnce();
+    expect(clearLocalSession).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: /Aceitar/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("mantém o aviso e a sessão aberta se a exclusão por recusa falhar", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    deleteOwnAccount.mockRejectedValue({
+      response: { data: { detail: "Falha ao excluir a conta." } },
+    });
+
+    await loadHome();
+    fireEvent.click(screen.getByRole("button", { name: /Recusar/i }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+      await flushPromises();
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Falha ao excluir a conta."
+    );
+    expect(clearLocalSession).not.toHaveBeenCalled();
+    expect(screen.getByText(/Aviso sobre Consentimento/i)).toBeInTheDocument();
+  });
+
+  it("abre o gerenciamento de consentimentos pelo dropdown do usuário", async () => {
+    fetchUserConsents.mockResolvedValue([1]);
+
+    await loadHome();
+    openConsentManager();
+
+    expect(
+      screen.getByRole("heading", { name: "Termos e Condições" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Gerenciar Consentimentos/i })
+    );
+
+    expect(
+      screen.getByRole("button", { name: /Salvar alterações/i })
+    ).toBeInTheDocument();
+  });
+
+  it("salva os consentimentos alterados pelo gerenciamento", async () => {
+    fetchTerms.mockResolvedValue([
+      { id: 1, description: "Termo obrigatório", required: true },
+      { id: 2, description: "Termo opcional", required: false },
+    ]);
+    fetchUserConsents.mockResolvedValue([1, 2]);
+    updateUserConsents.mockResolvedValue({ success: true, accepted: [1] });
+
+    await loadHome();
+    openConsentManager();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Gerenciar Consentimentos/i })
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /Termo opcional/i })
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: /Salvar alterações/i })
+      );
+      await flushPromises();
+    });
+
+    expect(updateUserConsents).toHaveBeenCalledWith(
+      [1],
+      [
+        { id: 1, description: "Termo obrigatório", required: true },
+        { id: 2, description: "Termo opcional", required: false },
+      ]
+    );
+    expect(
+      screen.queryByRole("heading", { name: "Termos e Condições" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("deve exibir o aviso de vazamento após o usuário aceitar os termos", async () => {
+    acceptTerms.mockResolvedValue({ success: true });
+    fetchLatestLeakIncident.mockResolvedValue({
+      id: "incidente-1",
+      timestamp: "2026-11-01T12:00:00Z",
+    });
+
+    render(<Home />);
+
+    // Avança os timers para o fetchTerms do mock (300ms) e o debounce da busca resolverem
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+
+    // O modal de termos deve estar visível
+    const checkbox = screen.getByRole("checkbox", {
+      name: /Termo obrigatório/i,
+    });
+    fireEvent.click(checkbox);
+
+    const acceptButton = screen.getByRole("button", { name: /Aceitar/i });
+    fireEvent.click(acceptButton);
+
+    // Avança os timers para o acceptTerms resolver e atualizar o estado
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
+
+    expect(
+      screen.getByText(/Aviso de vazamento de Dados/i)
+    ).toBeInTheDocument();
+
+    const closeButton = screen.getByRole("button", {
+      name: /Fechar aviso/i,
+    });
+    fireEvent.click(closeButton);
+
+    expect(
+      screen.queryByText(/Aviso de vazamento de Dados/i)
+    ).not.toBeInTheDocument();
+    expect(acknowledgeLeakIncident).toHaveBeenCalledWith(
+      "incidente-1",
+      "usuario-teste"
+    );
+  });
+
+  it("não exibe o aviso quando não há incidente de vazamento registrado", async () => {
+    fetchUserConsents.mockResolvedValue([1]);
+    fetchLatestLeakIncident.mockResolvedValue(null);
+
+    await loadHome();
+
+    expect(fetchLatestLeakIncident).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByText(/Aviso de vazamento de Dados/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("não exibe o aviso para um incidente que o usuário já fechou", async () => {
+    fetchUserConsents.mockResolvedValue([1]);
+    fetchLatestLeakIncident.mockResolvedValue({
+      id: "incidente-1",
+      timestamp: "2026-11-01T12:00:00Z",
+    });
+    isLeakIncidentAcknowledged.mockReturnValue(true);
+
+    await loadHome();
+
+    expect(isLeakIncidentAcknowledged).toHaveBeenCalledWith(
+      "incidente-1",
+      "usuario-teste"
+    );
+    expect(
+      screen.queryByText(/Aviso de vazamento de Dados/i)
+    ).not.toBeInTheDocument();
   });
 });

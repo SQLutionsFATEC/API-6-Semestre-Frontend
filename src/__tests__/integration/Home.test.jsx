@@ -8,6 +8,18 @@ import {
   fetchDocuments,
   updateDocument,
 } from "../../services/documentService";
+import {
+  fetchTerms,
+  fetchUserConsents,
+  acceptTerms,
+  updateUserConsents,
+} from "../../services/termsService";
+import {
+  acknowledgeLeakIncident,
+  fetchLatestLeakIncident,
+  isLeakIncidentAcknowledged,
+} from "../../services/leakWarningService";
+import { requestDocumentAccess } from "../../services/accessRequestService";
 
 vi.mock("../../services/documentService", () => ({
   fetchDocuments: vi.fn(),
@@ -26,6 +38,23 @@ vi.mock("../../services/userService", () => ({
     setor: "tecnico",
   }),
   updateProfile: vi.fn(),
+}));
+
+vi.mock("../../services/termsService", () => ({
+  fetchTerms: vi.fn(),
+  fetchUserConsents: vi.fn(),
+  acceptTerms: vi.fn(),
+  updateUserConsents: vi.fn(),
+}));
+
+vi.mock("../../services/leakWarningService", () => ({
+  fetchLatestLeakIncident: vi.fn(),
+  isLeakIncidentAcknowledged: vi.fn(),
+  acknowledgeLeakIncident: vi.fn(),
+}));
+
+vi.mock("../../services/accessRequestService", () => ({
+  requestDocumentAccess: vi.fn(),
 }));
 
 vi.mock("pdfjs-dist", () => ({
@@ -116,6 +145,13 @@ beforeEach(() => {
 
   vi.mocked(fetchDocuments).mockResolvedValue(documentsPage);
   vi.mocked(fetchDocumentById).mockResolvedValue(documentDetail);
+  vi.mocked(fetchTerms).mockResolvedValue([
+    { id: 1, description: "Termo obrigatório", required: true },
+  ]);
+  vi.mocked(fetchUserConsents).mockResolvedValue([]);
+  vi.mocked(fetchLatestLeakIncident).mockResolvedValue(null);
+  vi.mocked(isLeakIncidentAcknowledged).mockReturnValue(false);
+  vi.mocked(requestDocumentAccess).mockResolvedValue({ created: true });
 });
 
 afterEach(() => {
@@ -588,7 +624,8 @@ describe("Home", () => {
     expect(fetchDocumentById).not.toHaveBeenCalled();
   });
 
-  it("avisa ao tentar visualizar documento restrito e não abre o PDF", async () => {
+  it("solicita acesso para documento restrito sem exibir Visualizar ou abrir o PDF", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     vi.mocked(fetchDocumentById).mockResolvedValue({
       ...documentDetail,
       acesso_permitido: false,
@@ -605,17 +642,79 @@ describe("Home", () => {
       expect(getModal()).toHaveTextContent("Acesso Bloqueado");
     });
 
-    fireEvent.click(getModal().querySelector("footer .modal-view-button"));
+    expect(getModal().querySelector("footer .modal-view-button")).toBeNull();
+    fireEvent.click(getModal().querySelector("footer button"));
 
+    await waitFor(() => {
+      expect(requestDocumentAccess).toHaveBeenCalledWith(1);
+      expect(alert).toHaveBeenCalledWith(
+        "Solicitação de acesso enviada com sucesso."
+      );
+    });
+    expect(getModal()).toBeInTheDocument();
     expect(
-      await screen.findByRole("heading", { name: "Acesso Restrito" })
-    ).toBeInTheDocument();
-
-    expect(getModal()).not.toBeInTheDocument();
-
-    expect(
-      screen.queryByRole("dialog", { name: /Manual do sistema.pdf/ })
+      screen.queryByRole("dialog", { name: /Visualização de Manual do sistema.pdf/ })
     ).not.toBeInTheDocument();
+  });
+
+  it("informa quando o usuário já possui solicitação de acesso para o documento", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.mocked(requestDocumentAccess).mockResolvedValue({ created: false });
+    vi.mocked(fetchDocumentById).mockResolvedValue({
+      ...documentDetail,
+      acesso_permitido: false,
+    });
+
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
+    openFirstDocument();
+
+    await waitFor(() => {
+      expect(getModal()).toHaveTextContent("Acesso Bloqueado");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Acesso" }));
+
+    await waitFor(() => {
+      expect(alert).toHaveBeenCalledWith(
+        "Você já possui uma solicitação de acesso para este documento."
+      );
+    });
+  });
+
+  it("informa a falha ao solicitar acesso", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const consoleSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    vi.mocked(requestDocumentAccess).mockRejectedValue(new Error("falha"));
+    vi.mocked(fetchDocumentById).mockResolvedValue({
+      ...documentDetail,
+      acesso_permitido: false,
+    });
+
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
+    openFirstDocument();
+
+    await waitFor(() => {
+      expect(getModal()).toHaveTextContent("Acesso Bloqueado");
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Solicitar Acesso" }));
+
+    await waitFor(() => {
+      expect(alert).toHaveBeenCalledWith(
+        "Não foi possível enviar a solicitação de acesso. Tente novamente."
+      );
+    });
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "Erro ao solicitar acesso ao documento:",
+      expect.any(Error)
+    );
   });
 
   it("mantém Editar habilitado, mas bloqueia a edição sem a role operador", async () => {
@@ -710,9 +809,6 @@ describe("Home", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Voltar aos detalhes" }));
 
-    // Após salvar, o nome aparece no modal de detalhes E no card da lista.
-    // Confirma que a lista (card) foi atualizada, olhando especificamente
-    // para o item com a classe `.document-name`.
     await waitFor(() => {
       const cardNames = Array.from(
         globalThis.document.querySelectorAll(".document-name")
@@ -721,9 +817,125 @@ describe("Home", () => {
       expect(cardNames).toContain("Manual atualizado.pdf");
     });
 
-    // E o modal de detalhes também reflete a atualização.
     await waitFor(() => {
       expect(getModal()?.querySelector(".modal-code")).toHaveTextContent("Manual atualizado.pdf");
     });
+  });
+
+  it("gerencia consentimentos pelo dropdown do usuário", async () => {
+    vi.mocked(fetchTerms).mockResolvedValue([
+      { id: 1, description: "Termo obrigatório", required: true },
+      { id: 2, description: "Termo opcional", required: false },
+    ]);
+    vi.mocked(fetchUserConsents).mockResolvedValue([1, 2]);
+    vi.mocked(updateUserConsents).mockResolvedValue({
+      success: true,
+      accepted: [1],
+    });
+
+    render(<Home />);
+
+    await screen.findByText("Manual do sistema.pdf");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Abrir menu do usuário" })
+    );
+    fireEvent.click(
+      screen.getByRole("menuitem", { name: "Consentimento" })
+    );
+
+    expect(
+      screen.getByRole("heading", { name: "Termos e Condições" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Gerenciar Consentimentos/i })
+    );
+    fireEvent.click(
+      screen.getByRole("checkbox", { name: /Termo opcional/i })
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /Salvar alterações/i })
+    );
+
+    await waitFor(() => {
+      expect(updateUserConsents).toHaveBeenCalledWith(
+        [1],
+        [
+          { id: 1, description: "Termo obrigatório", required: true },
+          { id: 2, description: "Termo opcional", required: false },
+        ]
+      );
+    });
+
+    expect(
+      screen.queryByRole("heading", { name: "Termos e Condições" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("deve exibir o aviso de vazamento após o usuário aceitar os termos", async () => {
+    vi.mocked(acceptTerms).mockResolvedValue({ success: true });
+    vi.mocked(fetchLatestLeakIncident).mockResolvedValue({
+      id: "incidente-1",
+      timestamp: "2026-11-01T12:00:00Z",
+    });
+
+    render(<Home />);
+
+    const checkbox = await screen.findByRole("checkbox", {
+      name: /Termo obrigatório/i,
+    });
+    fireEvent.click(checkbox);
+
+    const acceptButton = screen.getByRole("button", { name: /Aceitar/i });
+    fireEvent.click(acceptButton);
+
+    expect(
+      await screen.findByText(/Aviso de vazamento de Dados/i)
+    ).toBeInTheDocument();
+
+    const closeButton = screen.getByRole("button", {
+      name: /Fechar aviso/i,
+    });
+    fireEvent.click(closeButton);
+
+    expect(
+      screen.queryByText(/Aviso de vazamento de Dados/i)
+    ).not.toBeInTheDocument();
+    expect(acknowledgeLeakIncident).toHaveBeenCalledWith("incidente-1", "");
+  });
+
+  it("não exibe o aviso quando não há incidente de vazamento registrado", async () => {
+    vi.mocked(fetchUserConsents).mockResolvedValue([1]);
+    vi.mocked(fetchLatestLeakIncident).mockResolvedValue(null);
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(fetchLatestLeakIncident).toHaveBeenCalledTimes(1);
+    });
+
+    expect(
+      screen.queryByText(/Aviso de vazamento de Dados/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it("não exibe o aviso para um incidente que o usuário já fechou", async () => {
+    vi.mocked(fetchUserConsents).mockResolvedValue([1]);
+    vi.mocked(fetchLatestLeakIncident).mockResolvedValue({
+      id: "incidente-1",
+      timestamp: "2026-11-01T12:00:00Z",
+    });
+    vi.mocked(isLeakIncidentAcknowledged).mockReturnValue(true);
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(isLeakIncidentAcknowledged).toHaveBeenCalledWith("incidente-1", "");
+    });
+
+    expect(
+      screen.queryByText(/Aviso de vazamento de Dados/i)
+    ).not.toBeInTheDocument();
   });
 });
