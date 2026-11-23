@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import TermsModal from "./TermsModal";
 
@@ -35,6 +35,23 @@ describe("TermsModal", () => {
     expect(acceptButton).not.toBeDisabled();
   });
 
+  it("mantém marcados os consentimentos previamente aceitos", () => {
+    render(
+      <TermsModal
+        terms={mockTerms}
+        acceptedTermIds={[2]}
+        onAccept={vi.fn()}
+        onDecline={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByRole("checkbox", {
+        name: /Utilização e coleta de seu e-mail/i,
+      })
+    ).toBeChecked();
+  });
+
   it("deve exibir a mensagem de erro ao lado do termo obrigatório não marcado", () => {
     render(
       <TermsModal terms={mockTerms} onAccept={vi.fn()} onDecline={vi.fn()} />
@@ -45,7 +62,7 @@ describe("TermsModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("deve chamar onAccept com os IDs corretos ao clicar em Aceitar", () => {
+  it("deve chamar onAccept com os IDs corretos ao clicar em Aceitar", async () => {
     const handleAccept = vi.fn();
     render(
       <TermsModal
@@ -61,7 +78,9 @@ describe("TermsModal", () => {
     fireEvent.click(
       screen.getByRole("checkbox", { name: /Utilização e coleta de seu e-mail/i })
     );
-    fireEvent.click(screen.getByRole("button", { name: /Aceitar/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Aceitar/i }));
+    });
 
     expect(handleAccept).toHaveBeenCalledWith([1, 2]);
   });
@@ -77,12 +96,34 @@ describe("TermsModal", () => {
       screen.getByText(/Aviso sobre Consentimento/i)
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Você será deslogado e todos os/i)
+      screen.getByText(/Sua conta será excluída e você será deslogado/i)
     ).toBeInTheDocument();
   });
 
-  it("deve chamar onDecline ao clicar em Continuar no aviso", () => {
+  it("deve chamar onDecline ao clicar em Continuar no aviso", async () => {
     const handleDecline = vi.fn();
+    render(
+      <TermsModal
+        terms={mockTerms}
+        onAccept={vi.fn()}
+        onDecline={handleDecline}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Recusar/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    });
+
+    expect(handleDecline).toHaveBeenCalledTimes(1);
+  });
+
+  it("exibe erro e mantém o aviso aberto quando a exclusão falha", async () => {
+    const handleDecline = vi
+      .fn()
+      .mockRejectedValue(new Error("Falha na exclusão"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
     render(
       <TermsModal
         terms={mockTerms}
@@ -94,7 +135,13 @@ describe("TermsModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Recusar/i }));
     fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
 
-    expect(handleDecline).toHaveBeenCalledTimes(1);
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Não foi possível concluir sua solicitação. Tente novamente."
+    );
+    expect(screen.getByText(/Aviso sobre Consentimento/i)).toBeInTheDocument();
+    expect(handleDecline).toHaveBeenCalledOnce();
+
+    vi.restoreAllMocks();
   });
 
   it("deve voltar para a tela de termos ao clicar em Cancelar no aviso", () => {

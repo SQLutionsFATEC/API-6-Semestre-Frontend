@@ -29,7 +29,6 @@ import {
   fetchUserConsents,
   acceptTerms,
   updateUserConsents,
-  anonymizeAccount,
 } from "../../services/termsService";
 import {
   acknowledgeLeakIncident,
@@ -105,6 +104,15 @@ function Home({ documentsRefreshKey = 0 }) {
 
   const currentUserId = keycloak?.subject ?? keycloak?.tokenParsed?.sub ?? "";
 
+  useEffect(() => {
+    function handleTermsRequired() {
+      setIsTermsModalOpen(true);
+    }
+
+    window.addEventListener("terms-required", handleTermsRequired);
+    return () => window.removeEventListener("terms-required", handleTermsRequired);
+  }, []);
+
   const checkLeakWarning = useCallback(async () => {
     try {
       const incident = await fetchLatestLeakIncident();
@@ -129,11 +137,16 @@ function Home({ documentsRefreshKey = 0 }) {
           role: userData.setor,
           level: userData.nivel_acesso,
         });
+      } catch (err) {
+        console.error("Erro ao carregar perfil:", err);
+        setCurrentUser({ name: "Usuário", email: "—", role: "—", level: "—" });
+      }
 
+      try {
         const fetchedTerms = await fetchTerms();
-        setTerms(fetchedTerms);
-
         const userConsents = await fetchUserConsents();
+
+        setTerms(fetchedTerms);
         setConsents(userConsents);
 
         const hasPendingRequiredTerm = fetchedTerms.some(
@@ -146,8 +159,7 @@ function Home({ documentsRefreshKey = 0 }) {
           await checkLeakWarning();
         }
       } catch (err) {
-        console.error("Erro ao carregar perfil ou termos:", err);
-        setCurrentUser({ name: "Usuário", email: "—", role: "—", level: "—" });
+        console.error("Erro ao carregar os termos e consentimentos:", err);
       }
     }
 
@@ -456,18 +468,14 @@ function Home({ documentsRefreshKey = 0 }) {
   }
 
   async function handleAcceptTerms(acceptedTermIds) {
-    try {
-      await acceptTerms(acceptedTermIds);
-      setConsents(acceptedTermIds);
-      setIsTermsModalOpen(false);
-      await checkLeakWarning();
-    } catch (err) {
-      console.error("Erro ao aceitar os termos:", err);
-    }
+    await acceptTerms(acceptedTermIds, terms);
+    setConsents(acceptedTermIds);
+    setIsTermsModalOpen(false);
+    await checkLeakWarning();
   }
 
   async function handleSaveConsents(acceptedTermIds) {
-    await updateUserConsents(acceptedTermIds);
+    await updateUserConsents(acceptedTermIds, terms);
     setConsents(acceptedTermIds);
     setIsConsentManagerOpen(false);
   }
@@ -482,14 +490,9 @@ function Home({ documentsRefreshKey = 0 }) {
   }
 
   async function handleDeclineTerms() {
-    try {
-      await anonymizeAccount();
-    } catch (err) {
-      console.error("Erro ao anonimizar conta:", err);
-    } finally {
-      setIsTermsModalOpen(false);
-      clearLocalSession();
-    }
+    await deleteOwnAccount();
+    setIsTermsModalOpen(false);
+    clearLocalSession();
   }
 
   return (
@@ -653,6 +656,7 @@ function Home({ documentsRefreshKey = 0 }) {
       {isTermsModalOpen && terms.length > 0 && (
         <TermsModal
           terms={terms}
+          acceptedTermIds={consents}
           onAccept={handleAcceptTerms}
           onDecline={handleDeclineTerms}
         />

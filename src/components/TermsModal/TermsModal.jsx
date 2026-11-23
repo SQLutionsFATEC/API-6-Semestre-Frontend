@@ -1,10 +1,15 @@
 import { useState } from "react";
 
-function TermsModal({ terms, onAccept, onDecline }) {
-  const [checkedTerms, setCheckedTerms] = useState({});
+function TermsModal({ terms, acceptedTermIds = [], onAccept, onDecline }) {
+  const [checkedTerms, setCheckedTerms] = useState(() =>
+    Object.fromEntries(acceptedTermIds.map((termId) => [termId, true]))
+  );
   const [view, setView] = useState("terms");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleCheckboxChange = (termId) => {
+    setErrorMessage("");
     setCheckedTerms((prev) => ({
       ...prev,
       [termId]: !prev[termId],
@@ -15,6 +20,26 @@ function TermsModal({ terms, onAccept, onDecline }) {
     .filter((term) => term.required)
     .every((term) => checkedTerms[term.id]);
 
+  const handleSubmit = async (callback, errorLabel) => {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      await callback();
+    } catch (error) {
+      console.error(errorLabel, error);
+      setErrorMessage(
+        typeof error?.response?.data?.detail === "string"
+          ? error.response.data.detail
+          : "Não foi possível concluir sua solicitação. Tente novamente."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleAccept = () => {
     if (!allRequiredChecked) return;
 
@@ -22,8 +47,14 @@ function TermsModal({ terms, onAccept, onDecline }) {
       .filter((term) => checkedTerms[term.id])
       .map((term) => term.id);
 
-    onAccept(acceptedIds);
+    return handleSubmit(
+      () => onAccept(acceptedIds),
+      "Erro ao aceitar os termos:"
+    );
   };
+
+  const handleDecline = () =>
+    handleSubmit(onDecline, "Erro ao excluir a conta após recusar os termos:");
 
   if (view === "warning") {
     return (
@@ -41,8 +72,7 @@ function TermsModal({ terms, onAccept, onDecline }) {
               <strong className="font-bold text-slate-900">termos obrigatórios</strong> para utilizar a aplicação.
             </p>
             <p className="m-0 leading-relaxed">
-              Você será deslogado e todos os{" "}
-              <strong className="font-bold text-slate-900">seus dados serão anonimizados</strong>, você{" "}
+              Sua conta será excluída e você será deslogado. Você{" "}
               <strong className="font-bold text-slate-900">não poderá logar</strong> novamente, deseja atualizar seu
               consentimento sobre os termos?
             </p>
@@ -51,19 +81,26 @@ function TermsModal({ terms, onAccept, onDecline }) {
           <div className="flex justify-between gap-3 pt-2.5">
             <button
               type="button"
-              className="min-w-[130px] rounded-full border border-slate-400 bg-white px-7 py-2 text-sm font-medium text-slate-900 transition-all duration-150 ease-in-out hover:border-slate-500 hover:bg-slate-50"
+              className="min-w-[130px] rounded-full border border-slate-400 bg-white px-7 py-2 text-sm font-medium text-slate-900 transition-all duration-150 ease-in-out hover:border-slate-500 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               onClick={() => setView("terms")}
+              disabled={isSubmitting}
             >
               Cancelar
             </button>
             <button
               type="button"
-              className="min-w-[130px] rounded-full border border-[#7A0026] bg-[#7A0026] px-7 py-2 text-sm font-semibold text-white transition-all duration-150 ease-in-out hover:border-[#5e001d] hover:bg-[#5e001d]"
-              onClick={onDecline}
+              className="min-w-[130px] rounded-full border border-[#7A0026] bg-[#7A0026] px-7 py-2 text-sm font-semibold text-white transition-all duration-150 ease-in-out hover:border-[#5e001d] hover:bg-[#5e001d] disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleDecline}
+              disabled={isSubmitting}
             >
-              Continuar
+              {isSubmitting ? "Processando..." : "Continuar"}
             </button>
           </div>
+          {errorMessage && (
+            <p role="alert" className="m-0 text-sm text-red-700">
+              {errorMessage}
+            </p>
+          )}
         </div>
       </div>
     );
@@ -97,13 +134,19 @@ function TermsModal({ terms, onAccept, onDecline }) {
               )}
             </div>
           ))}
+          {errorMessage && (
+            <p role="alert" className="m-0 text-sm text-red-700">
+              {errorMessage}
+            </p>
+          )}
         </div>
 
         <div className="flex justify-between gap-3 pt-2.5">
           <button
             type="button"
-            className="min-w-[130px] rounded-full border border-slate-400 bg-white px-7 py-2 text-sm font-medium text-slate-900 transition-all duration-150 ease-in-out hover:border-slate-500 hover:bg-slate-50"
+            className="min-w-[130px] rounded-full border border-slate-400 bg-white px-7 py-2 text-sm font-medium text-slate-900 transition-all duration-150 ease-in-out hover:border-slate-500 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             onClick={() => setView("warning")}
+            disabled={isSubmitting}
           >
             Recusar
           </button>
@@ -111,9 +154,9 @@ function TermsModal({ terms, onAccept, onDecline }) {
             type="button"
             className="min-w-[130px] rounded-full border border-[#7A0026] bg-[#7A0026] px-7 py-2 text-sm font-semibold text-white transition-all duration-150 ease-in-out hover:border-[#5e001d] hover:bg-[#5e001d] disabled:cursor-not-allowed disabled:border-[#c9a5b0] disabled:bg-[#c9a5b0] disabled:opacity-70"
             onClick={handleAccept}
-            disabled={!allRequiredChecked}
+            disabled={!allRequiredChecked || isSubmitting}
           >
-            Aceitar
+            {isSubmitting ? "Processando..." : "Aceitar"}
           </button>
         </div>
       </div>
