@@ -52,7 +52,6 @@ vi.mock("../../services/termsService", () => ({
   fetchUserConsents: vi.fn(),
   acceptTerms: vi.fn(),
   updateUserConsents: vi.fn(),
-  anonymizeAccount: vi.fn(),
 }));
 
 vi.mock("../../services/leakWarningService", () => ({
@@ -721,6 +720,62 @@ describe("Home", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("abre o modal inicial ao receber o evento de resposta 451", async () => {
+    fetchUserConsents.mockResolvedValue([1]);
+
+    await loadHome();
+    expect(
+      screen.queryByRole("button", { name: /Aceitar/i })
+    ).not.toBeInTheDocument();
+
+    act(() => {
+      window.dispatchEvent(new Event("terms-required"));
+    });
+
+    expect(
+      screen.getByRole("button", { name: /Aceitar/i })
+    ).toBeInTheDocument();
+  });
+
+  it("exclui a conta e encerra a sessão ao confirmar a recusa dos termos", async () => {
+    deleteOwnAccount.mockResolvedValue(undefined);
+
+    await loadHome();
+    fireEvent.click(screen.getByRole("button", { name: /Recusar/i }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+      await flushPromises();
+    });
+
+    expect(deleteOwnAccount).toHaveBeenCalledOnce();
+    expect(clearLocalSession).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: /Aceitar/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("mantém o aviso e a sessão aberta se a exclusão por recusa falhar", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    deleteOwnAccount.mockRejectedValue({
+      response: { data: { detail: "Falha ao excluir a conta." } },
+    });
+
+    await loadHome();
+    fireEvent.click(screen.getByRole("button", { name: /Recusar/i }));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+      await flushPromises();
+    });
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Falha ao excluir a conta."
+    );
+    expect(clearLocalSession).not.toHaveBeenCalled();
+    expect(screen.getByText(/Aviso sobre Consentimento/i)).toBeInTheDocument();
+  });
+
   it("abre o gerenciamento de consentimentos pelo dropdown do usuário", async () => {
     fetchUserConsents.mockResolvedValue([1]);
 
@@ -765,7 +820,13 @@ describe("Home", () => {
       await flushPromises();
     });
 
-    expect(updateUserConsents).toHaveBeenCalledWith([1]);
+    expect(updateUserConsents).toHaveBeenCalledWith(
+      [1],
+      [
+        { id: 1, description: "Termo obrigatório", required: true },
+        { id: 2, description: "Termo opcional", required: false },
+      ]
+    );
     expect(
       screen.queryByRole("heading", { name: "Termos e Condições" })
     ).not.toBeInTheDocument();

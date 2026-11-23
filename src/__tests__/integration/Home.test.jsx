@@ -45,7 +45,6 @@ vi.mock("../../services/termsService", () => ({
   fetchUserConsents: vi.fn(),
   acceptTerms: vi.fn(),
   updateUserConsents: vi.fn(),
-  anonymizeAccount: vi.fn(),
 }));
 
 vi.mock("../../services/leakWarningService", () => ({
@@ -860,7 +859,13 @@ describe("Home", () => {
     );
 
     await waitFor(() => {
-      expect(updateUserConsents).toHaveBeenCalledWith([1]);
+      expect(updateUserConsents).toHaveBeenCalledWith(
+        [1],
+        [
+          { id: 1, description: "Termo obrigatório", required: true },
+          { id: 2, description: "Termo opcional", required: false },
+        ]
+      );
     });
 
     expect(
